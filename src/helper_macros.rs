@@ -62,3 +62,17 @@ macro_rules! shift_board_down {
     };
 }
 
+
+#[macro_export]
+macro_rules! get_rank {
+    ($square:expr) => {
+        $square / 8
+    };
+}
+
+#[macro_export]
+macro_rules! get_file {
+    ($square:expr) => {
+        $square % 8
+    };
+}

@@ -80,16 +80,20 @@ pub mod directions {
     pub const NORTH: usize =       8;
     pub const NORTH_EAST: usize =  9;
     pub const EAST: usize =        1;
-    pub const SOUTH_EAST: usize = usize::MAX - 6;
-    pub const SOUTH: usize =      usize::MAX - 7;
-    pub const SOUTH_WEST: usize = usize::MAX - 8;
-    pub const WEST: usize =       usize::MAX;
+    pub const SOUTH_EAST: usize =  usize::MAX - 6;
+    pub const SOUTH: usize =       usize::MAX - 7;
+    pub const SOUTH_WEST: usize =  usize::MAX - 8;
+    pub const WEST: usize =        usize::MAX;
 }
 
 pub mod board_constants {
     pub const A_FILE: usize =             0x0101010101010101;
+    pub const B_FILE: usize =             0x0202020202020202;
+    pub const G_FILE: usize =             0x4040404040404040;
     pub const H_FILE: usize =             0x8080808080808080;
     pub const RANK1: usize =              0x00000000000000FF;
+    pub const RANK2: usize =              0x000000000000FF00;
+    pub const RANK7: usize =              0x00FF000000000000;
     pub const RANK8: usize =              0xFF00000000000000;
     pub const A1_H8_DIOGNAL: usize =      0x8040201008040201;
     pub const H1_A8_ANTI_DIOGNAL: usize = 0x0102040810204080;
@@ -99,3 +103,8 @@ pub mod board_constants {
     pub const BLACK: usize = 1;
 }
 
+pub mod types {
+    pub type PawnTable =   [[usize; 64]; 2];
+    pub type KnightTable = [usize; 64];
+    pub type KingTable =   [usize; 64];
+}

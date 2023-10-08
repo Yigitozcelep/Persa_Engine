@@ -1,32 +1,30 @@
-use crate::constants::board_constants::{A_FILE, RANK1};
-use crate::{shift_board_right, is_square_set, shift_board_up};
+use crate::{get_file, get_rank};
 
 pub fn print_bit_board (board: usize) {
-    let space = " ".repeat(20);
-    println!("\n{}+--------+", space);
+    let first_space = " ".repeat(20);
+    let second_space = " ".repeat(2);
+    println!("\n{} {}+-----------------+", first_space, second_space);
     for i in (0..8).rev() {
-        print!("{}|", space);
+        print!("{}{}{}| ", first_space, (i + 1).to_string(), second_space);
         for j in 0..8 {
             let shift = i * 8 + j;
             let bit = (board & (1 << shift)) >> shift;
-            print!("{}", bit);
+            print!("{} ", bit);
 
         }
         print!("|\n");
     }
-    println!("{}+--------+", space);
+    println!("{} {}+-----------------+\n", first_space, second_space);
+    let files = ["A","B","C","D","E","F","G","H"];
+    print!("{} {}  ", first_space, second_space);
+    for i in 0..8 {
+        print!("{} ", files[i]);
+    }
+    println!("\n");
 }
 
-
-
-
 pub fn get_square_name (square: usize) -> String{
-    let mut name = "".to_string();
     let files = ["A","B","C","D","E","F","G","H"];
-    name += files[(0..8).position(|i| is_square_set!(shift_board_right!(A_FILE, i), square)).unwrap()];
-
-    let index = (0..8).position(|i| is_square_set!(shift_board_up!(RANK1, i), square)).unwrap();
-    name += &(index + 1).to_string(); // there is no A0 square, Ranks stars from 1 not 0;
-    name
+    files[get_file!(square)].to_string() + &(get_rank!(square) + 1).to_string()
 }
 
