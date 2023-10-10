@@ -99,6 +99,8 @@ pub mod board_constants {
     pub const H1_A8_ANTI_DIOGNAL: usize = 0x0102040810204080;
     pub const LIGHT_SQUARES: usize =      0x55AA55AA55AA55AA;
     pub const DARK_SQUARES: usize =       0xAA55AA55AA55AA55;
+    pub const EDGES: usize =              RANK1 | RANK8 | A_FILE | H_FILE;
+    pub const CORNERS: usize =            (RANK1 & A_FILE) | (RANK1 & H_FILE) | (RANK8 & A_FILE) | (RANK8 & H_FILE);
     pub const WHITE: usize = 0;
     pub const BLACK: usize = 1;
 }
@@ -107,4 +109,28 @@ pub mod types {
     pub type PawnTable =   [[usize; 64]; 2];
     pub type KnightTable = [usize; 64];
     pub type KingTable =   [usize; 64];
+}
+
+pub mod move_counts {
+    const BISHOP_MOVE_COUNTS: [usize; 64] = [
+        6, 5, 5, 5, 5, 5, 5, 6, 
+        5, 5, 5, 5, 5, 5, 5, 5, 
+        5, 5, 7, 7, 7, 7, 5, 5, 
+        5, 5, 7, 9, 9, 7, 5, 5, 
+        5, 5, 7, 9, 9, 7, 5, 5, 
+        5, 5, 7, 7, 7, 7, 5, 5, 
+        5, 5, 5, 5, 5, 5, 5, 5, 
+        6, 5, 5, 5, 5, 5, 5, 6, 
+    ];
+
+    const ROOK_MOVE_COUNTS: [usize; 64] = [
+        12, 11, 11, 11, 11, 11, 11, 12, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        12, 11, 11, 11, 11, 11, 11, 12, 
+    ];
 }

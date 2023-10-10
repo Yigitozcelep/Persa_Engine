@@ -63,14 +63,14 @@ pub fn create_knight_table() -> KnightTable {
 
 fn mask_king_attacks(square: usize) -> usize {
     let mut attack: usize = 0;
-    if !is_square_set!(RANK8, square)           {set_bit!(attack, square + NORTH);}
-    if !is_square_set!(RANK8 | H_FILE, square)  {set_bit!(attack, square + NORTH + EAST);}
-    if !is_square_set!(H_FILE, square)          {set_bit!(attack, square + EAST);}
-    if !is_square_set!(RANK1 | H_FILE, square)  {set_bit!(attack, square + SOUTH + EAST);}
-    if !is_square_set!(RANK1, square)           {set_bit!(attack, square + SOUTH);}
-    if !is_square_set!(RANK1 | A_FILE, square)  {set_bit!(attack, square + SOUTH + WEST);}
-    if !is_square_set!(A_FILE, square)          {set_bit!(attack, square + WEST);}
-    if !is_square_set!(RANK8 | A_FILE, square)  {set_bit!(attack, square + NORTH + WEST);}
+    if !is_square_set!(RANK8, square)           {set_bit!(attack, square + NORTH     );}
+    if !is_square_set!(RANK8 | H_FILE, square)  {set_bit!(attack, square + NORTH_EAST);}
+    if !is_square_set!(H_FILE, square)          {set_bit!(attack, square + EAST      );}
+    if !is_square_set!(RANK1 | H_FILE, square)  {set_bit!(attack, square + SOUTH_EAST);}
+    if !is_square_set!(RANK1, square)           {set_bit!(attack, square + SOUTH     );}
+    if !is_square_set!(RANK1 | A_FILE, square)  {set_bit!(attack, square + SOUTH_WEST);}
+    if !is_square_set!(A_FILE, square)          {set_bit!(attack, square + WEST      );}
+    if !is_square_set!(RANK8 | A_FILE, square)  {set_bit!(attack, square + NORTH_WEST);}
     attack
 }
 
