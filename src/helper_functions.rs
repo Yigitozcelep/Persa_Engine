@@ -26,3 +26,11 @@ pub fn get_possible_occupancy(mut board: usize, index: usize) -> usize {
     }   
     return occupancy;
 }
+
+
+pub fn find_magic_number(square: usize, relevant_bits: usize, bishop: usize) {
+    let mut occupancies:  [usize; 4096] = [0; 4096];
+    let mut attacks:      [usize; 4096] = [0; 4096];
+    let mut used_attacks: [usize; 4096] = [0; 4096];
+     
+}
