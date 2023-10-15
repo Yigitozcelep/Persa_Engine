@@ -1,0 +1,1 @@
+pub mod bishop_table;
