@@ -1,29 +1,19 @@
 use std::ops::{BitAnd, BitOr, Not, Add, Mul};
+use crate::{impl_square_index, impl_op, impl_indv_bit_op};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Board (pub u64);
 
-impl BitAnd for Board {
-    type Output = Board;
-    #[inline(always)]
-    fn bitand(self, rhs: Self) -> Self::Output {
-        Board(self.0 & rhs.0)
-    }
-}
+impl_op!(Board, BitAnd, bitand, 0);
+impl_op!(Board, BitOr, bitor, 0);
+impl_indv_bit_op!(Board, Not, not, 0);
 
-impl BitOr for Board {
-    type Output = Board;
+ 
+impl Mul<MagicNum> for Board {
+    type Output = u64;
     #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Board(self.0 | rhs.0)
-    }
-}
-
-impl Not for Board {
-    type Output = Board;
-    #[inline(always)]
-    fn not(self) -> Self::Output {
-        Board(!self.0)
+    fn mul(self, rhs: MagicNum) -> Self::Output {
+        self.0 * rhs.0
     }
 }
 
@@ -83,33 +73,11 @@ impl Board {
         self.0 = self.0 & self.0 - 1;
         result
     }
-
-    pub fn print_bit_board (&self) {
-        let first_space = " ".repeat(20);
-        let second_space = " ".repeat(2);
-        println!("\n{} {}+-----------------+", first_space, second_space);
-        for i in (0..8).rev() {
-            print!("{}{}{}| ", first_space, (i + 1).to_string(), second_space);
-            for j in 0..8 {
-                let shift = i * 8 + j;
-                let bit = (self.0 & (1 << shift)) >> shift;
-                print!("{} ", bit);
-    
-            }
-            print!("|\n");
-        }
-        println!("{} {}+-----------------+\n", first_space, second_space);
-        let files = ["A","B","C","D","E","F","G","H"];
-        print!("{} {}  ", first_space, second_space);
-        for i in 0..8 {
-            print!("{} ", files[i]);
-        }
-        println!("\n");
-    }
 }
 
 impl Iterator for Board {
     type Item = Square;
+    #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         if self.0 != 0 {
             Some(self.pop_square())
@@ -146,8 +114,10 @@ impl std::fmt::Display for Board {
 #[derive(Clone, Copy)]
 pub struct Square(pub u8);
 
-impl Square {
+impl Square {   
+    #[inline(always)]
     pub fn get_file(&self) -> u8 {self.0 % 8}
+    #[inline(always)]
     pub fn get_rank(&self) -> u8 {self.0 / 8}
 
     pub fn get_name(&self) -> String{
@@ -155,6 +125,7 @@ impl Square {
         files[self.get_file() as usize].to_string() + &(self.get_rank() + 1).to_string()
     }
 
+    #[inline(always)]
     pub fn create_squares(start: u8, end: u8) -> impl Iterator<Item=Square> {
         (start..end).map(Square)
     }
@@ -197,3 +168,65 @@ pub enum Color {
     White = 0,
     Black = 1,
 }
+
+
+pub struct MoveCounts([u8; 64]);
+impl_square_index!(MoveCounts, u8, 0);
+
+pub fn create_bishop_move_counts() -> MoveCounts {
+    MoveCounts([
+        6, 5, 5, 5, 5, 5, 5, 6, 
+        5, 5, 5, 5, 5, 5, 5, 5, 
+        5, 5, 7, 7, 7, 7, 5, 5, 
+        5, 5, 7, 9, 9, 7, 5, 5, 
+        5, 5, 7, 9, 9, 7, 5, 5, 
+        5, 5, 7, 7, 7, 7, 5, 5, 
+        5, 5, 5, 5, 5, 5, 5, 5, 
+        6, 5, 5, 5, 5, 5, 5, 6
+        ])
+}
+
+pub fn create_rook_move_counts() -> MoveCounts {
+    MoveCounts([
+        12, 11, 11, 11, 11, 11, 11, 12, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        11, 10, 10, 10, 10, 10, 10, 11, 
+        12, 11, 11, 11, 11, 11, 11, 12
+        ])
+}
+
+pub struct MagicNumGenerator(u32);
+impl MagicNumGenerator {
+    pub fn new() -> Self {
+       Self(1804289383)
+    }
+    #[inline(always)]
+    pub fn get_random_u32(&mut self) -> u32 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 17;
+        self.0 ^= self.0 << 5;
+        return self.0
+    }
+    
+    #[inline(always)]
+    pub fn get_random_u64(&mut self) -> u64 {
+        let n1 = (self.get_random_u32() as u64) & 0xFFFF;
+        let n2 = (self.get_random_u32() as u64) & 0xFFFF;
+        let n3 = (self.get_random_u32() as u64) & 0xFFFF;
+        let n4 = (self.get_random_u32() as u64) & 0xFFFF;
+        n1 | (n2 << 16) | (n3 << 32) | (n4 << 48)
+    }
+
+    #[inline(always)]
+    pub fn gen(&mut self) -> MagicNum {
+        MagicNum(self.get_random_u64() & self.get_random_u64() & self.get_random_u64())
+    }
+}
+#[derive(Clone, Copy, Debug)]
+pub struct MagicNum(pub u64);
+
+

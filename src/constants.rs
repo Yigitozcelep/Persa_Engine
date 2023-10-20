@@ -93,7 +93,7 @@ pub mod directions {
 
 pub mod board_constants {
     use crate::board_components::Board;
-
+    pub const EMPTY_BOARD:        Board =   Board(0);
     pub const A_FILE:             Board =   Board(0x0101010101010101);
     pub const B_FILE:             Board =   Board(0x0202020202020202);
     pub const G_FILE:             Board =   Board(0x4040404040404040);
@@ -112,30 +112,4 @@ pub mod board_constants {
     pub const RIGHT_2_FILE:       Board =   Board(0xC0C0C0C0C0C0C0C0);
     pub const BOTTOM_2_RANK:      Board =   Board(0x000000000000FFFF);
     pub const LEFT_2_FILE:        Board =   Board(0x0303030303030303);
-}
-
-pub mod move_counts {
-    use crate::board_components::Square;
-
-    const BISHOP_MOVE_COUNTS: [u8; 64] = [
-        6, 5, 5, 5, 5, 5, 5, 6, 
-        5, 5, 5, 5, 5, 5, 5, 5, 
-        5, 5, 7, 7, 7, 7, 5, 5, 
-        5, 5, 7, 9, 9, 7, 5, 5, 
-        5, 5, 7, 9, 9, 7, 5, 5, 
-        5, 5, 7, 7, 7, 7, 5, 5, 
-        5, 5, 5, 5, 5, 5, 5, 5, 
-        6, 5, 5, 5, 5, 5, 5, 6, 
-    ];
-
-    const ROOK_MOVE_COUNTS: [u8; 64] = [
-        12, 11, 11, 11, 11, 11, 11, 12, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        12, 11, 11, 11, 11, 11, 11, 12, 
-    ];
 }

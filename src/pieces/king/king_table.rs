@@ -1,7 +1,7 @@
 use crate::board_components::{Board, Square};
-use std::ops::Index;
 use crate::constants::board_constants::*;
 use crate::constants::directions::*;
+use crate::impl_square_index;
 
 pub struct KingTable([Board; 64]);
 
@@ -13,13 +13,7 @@ impl KingTable {
         Self(king_table)
     }
 }
-
-impl Index<Square> for KingTable {
-    type Output = Board;
-    fn index(&self, index: Square) -> &Self::Output {
-        &self.0[index.0 as usize]
-    }
-}
+impl_square_index!(KingTable, Board, 0);
 
 fn mask_king_attacks(square: Square) -> Board {
     let mut attack = Board::new();
