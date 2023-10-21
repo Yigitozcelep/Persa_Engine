@@ -1,17 +1,18 @@
-use crate::constants::board_constants::*;
+use crate::constants::board_constants::EDGES;
 use crate::constants::directions::*;
-use crate::constants::squares::A8;
-use crate::board_components::{Board, Square};
+use crate::board_components::{BitBoard, Square};
+use crate::constants::board_constants::{BISHOP_MAX_BLOCK_PERM, create_bishop_move_counts, create_bishop_magics};
+use crate::pieces::pieces_structs::SliderPieceTable;
 use std::cmp::{min, max};
 
-pub fn mask_bishop_attacks(square: Square) -> Board {
-    bishop_attacks_on_fly(square, Board::new()) & !EDGES
+pub fn mask_bishop_attacks(square: Square) -> BitBoard {
+    bishop_attacks_on_fly(square, BitBoard::new()) & !EDGES
 }
 
-pub fn bishop_attacks_on_fly(square: Square, blocker: Board) -> Board {
+pub fn bishop_attacks_on_fly(square: Square, blocker: BitBoard) -> BitBoard {
     let rank = square.get_rank();
     let file = square.get_file();
-    let mut attacks = Board::new();
+    let mut attacks = BitBoard::new();
 
     for i in 1..8 - max(rank, file) {
         attacks.set_bit(square + NORTH_EAST * i);
@@ -35,7 +36,7 @@ pub fn bishop_attacks_on_fly(square: Square, blocker: Board) -> Board {
     attacks
 }
 
-pub fn create_bishop_table() {
-    let square = A8;
-    println!("------------------------------\nsquare: {}", square.get_name());
+#[inline(always)]
+pub fn create_bishop_table() -> SliderPieceTable<BISHOP_MAX_BLOCK_PERM> {
+    SliderPieceTable::new(create_bishop_move_counts(), mask_bishop_attacks, bishop_attacks_on_fly, create_bishop_magics())
 }

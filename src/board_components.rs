@@ -1,15 +1,15 @@
-use std::ops::{BitAnd, BitOr, Not, Add, Mul};
-use crate::{impl_square_index, impl_op, impl_indv_bit_op};
+use std::ops::{BitAnd, BitOr, Not, Add, Mul, Index, IndexMut};
+use crate::{impl_op, impl_indv_bit_op};
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Board (pub u64);
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
+pub struct BitBoard (pub u64);
 
-impl_op!(Board, BitAnd, bitand, 0);
-impl_op!(Board, BitOr, bitor, 0);
-impl_indv_bit_op!(Board, Not, not, 0);
+impl_op!(BitBoard, BitAnd, bitand, 0);
+impl_op!(BitBoard, BitOr, bitor, 0);
+impl_indv_bit_op!(BitBoard, Not, not, 0);
 
- 
-impl Mul<MagicNum> for Board {
+
+impl Mul<MagicNum> for BitBoard {
     type Output = u64;
     #[inline(always)]
     fn mul(self, rhs: MagicNum) -> Self::Output {
@@ -17,9 +17,12 @@ impl Mul<MagicNum> for Board {
     }
 }
 
-impl Board {
+impl BitBoard {
     #[inline(always)]
     pub fn new() -> Self { Self(0) }
+
+    #[inline(always)]
+    pub fn from_u64(num: u64) -> Self { Self(num) }
 
     #[inline(always)]
     pub fn is_square_set(&self, square: Square) -> bool {
@@ -75,7 +78,7 @@ impl Board {
     }
 }
 
-impl Iterator for Board {
+impl Iterator for BitBoard {
     type Item = Square;
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
@@ -86,7 +89,7 @@ impl Iterator for Board {
     }
 }
 
-impl std::fmt::Display for Board {
+impl std::fmt::Display for BitBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let first_space = " ".repeat(20);
         let second_space = " ".repeat(2);
@@ -111,6 +114,7 @@ impl std::fmt::Display for Board {
         write!(f, "{}", result)
     }
 }
+
 #[derive(Clone, Copy)]
 pub struct Square(pub u8);
 
@@ -169,36 +173,6 @@ pub enum Color {
     Black = 1,
 }
 
-
-pub struct MoveCounts([u8; 64]);
-impl_square_index!(MoveCounts, u8, 0);
-
-pub fn create_bishop_move_counts() -> MoveCounts {
-    MoveCounts([
-        6, 5, 5, 5, 5, 5, 5, 6, 
-        5, 5, 5, 5, 5, 5, 5, 5, 
-        5, 5, 7, 7, 7, 7, 5, 5, 
-        5, 5, 7, 9, 9, 7, 5, 5, 
-        5, 5, 7, 9, 9, 7, 5, 5, 
-        5, 5, 7, 7, 7, 7, 5, 5, 
-        5, 5, 5, 5, 5, 5, 5, 5, 
-        6, 5, 5, 5, 5, 5, 5, 6
-        ])
-}
-
-pub fn create_rook_move_counts() -> MoveCounts {
-    MoveCounts([
-        12, 11, 11, 11, 11, 11, 11, 12, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        11, 10, 10, 10, 10, 10, 10, 11, 
-        12, 11, 11, 11, 11, 11, 11, 12
-        ])
-}
-
 pub struct MagicNumGenerator(u32);
 impl MagicNumGenerator {
     pub fn new() -> Self {
@@ -229,4 +203,24 @@ impl MagicNumGenerator {
 #[derive(Clone, Copy, Debug)]
 pub struct MagicNum(pub u64);
 
+pub struct ChessBoard<T>(pub [T; 64]);
 
+impl <T> ChessBoard<T> {
+    pub fn from(data: [T; 64]) -> Self {
+        Self(data)
+    }
+
+}
+
+impl<T> Index<Square> for ChessBoard<T> {
+    type Output = T;
+    fn index(&self, index: Square) -> &Self::Output {
+        &self.0[index.0 as usize]
+    }
+}
+
+impl <T> IndexMut<Square> for ChessBoard<T> {
+    fn index_mut(&mut self, index: Square) -> &mut Self::Output {
+        &mut self.0[index.0 as usize]
+    }
+}

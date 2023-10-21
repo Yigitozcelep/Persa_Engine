@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [profile.dev]
 overflow-checks = false
+opt-level = 1
 
 [profile.release]
 codegen-units = 1
@@ -14,4 +15,3 @@ panic = "abort"
 opt-level = 3
 
 [dependencies]
-rand = "0.8.5"

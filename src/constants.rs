@@ -92,24 +92,96 @@ pub mod directions {
 }
 
 pub mod board_constants {
-    use crate::board_components::Board;
-    pub const EMPTY_BOARD:        Board =   Board(0);
-    pub const A_FILE:             Board =   Board(0x0101010101010101);
-    pub const B_FILE:             Board =   Board(0x0202020202020202);
-    pub const G_FILE:             Board =   Board(0x4040404040404040);
-    pub const H_FILE:             Board =   Board(0x8080808080808080);
-    pub const RANK1:              Board =   Board(0x00000000000000FF);
-    pub const RANK2:              Board =   Board(0x000000000000FF00);
-    pub const RANK7:              Board =   Board(0x00FF000000000000);
-    pub const RANK8:              Board =   Board(0xFF00000000000000);
-    pub const A1_H8_DIOGNAL:      Board =   Board(0x8040201008040201);
-    pub const H1_A8_ANTI_DIOGNAL: Board =   Board(0x0102040810204080);
-    pub const LIGHT_SQUARES:      Board =   Board(0x55AA55AA55AA55AA);
-    pub const DARK_SQUARES:       Board =   Board(0xAA55AA55AA55AA55);
-    pub const EDGES:              Board =   Board(0xFF818181818181FF);
-    pub const CORNERS:            Board =   Board(0x8100000000000081);
-    pub const TOP_2_RANK:         Board =   Board(0xFFFF000000000000);
-    pub const RIGHT_2_FILE:       Board =   Board(0xC0C0C0C0C0C0C0C0);
-    pub const BOTTOM_2_RANK:      Board =   Board(0x000000000000FFFF);
-    pub const LEFT_2_FILE:        Board =   Board(0x0303030303030303);
+    use crate::board_components::{BitBoard, ChessBoard, MagicNum};
+    pub const ROOK_MAX_BLOCK_PERM:   usize = 4096;
+    pub const BISHOP_MAX_BLOCK_PERM: usize = 512;
+
+    pub const EMPTY_BITBOARD:     BitBoard =   BitBoard(0);
+    pub const A_FILE:             BitBoard =   BitBoard(0x0101010101010101);
+    pub const B_FILE:             BitBoard =   BitBoard(0x0202020202020202);
+    pub const G_FILE:             BitBoard =   BitBoard(0x4040404040404040);
+    pub const H_FILE:             BitBoard =   BitBoard(0x8080808080808080);
+    pub const RANK1:              BitBoard =   BitBoard(0x00000000000000FF);
+    pub const RANK2:              BitBoard =   BitBoard(0x000000000000FF00);
+    pub const RANK7:              BitBoard =   BitBoard(0x00FF000000000000);
+    pub const RANK8:              BitBoard =   BitBoard(0xFF00000000000000);
+    pub const A1_H8_DIOGNAL:      BitBoard =   BitBoard(0x8040201008040201);
+    pub const H1_A8_ANTI_DIOGNAL: BitBoard =   BitBoard(0x0102040810204080);
+    pub const LIGHT_SQUARES:      BitBoard =   BitBoard(0x55AA55AA55AA55AA);
+    pub const DARK_SQUARES:       BitBoard =   BitBoard(0xAA55AA55AA55AA55);
+    pub const EDGES:              BitBoard =   BitBoard(0xFF818181818181FF);
+    pub const CORNERS:            BitBoard =   BitBoard(0x8100000000000081);
+    pub const TOP_2_RANK:         BitBoard =   BitBoard(0xFFFF000000000000);
+    pub const RIGHT_2_FILE:       BitBoard =   BitBoard(0xC0C0C0C0C0C0C0C0);
+    pub const BOTTOM_2_RANK:      BitBoard =   BitBoard(0x000000000000FFFF);
+    pub const LEFT_2_FILE:        BitBoard =   BitBoard(0x0303030303030303);
+
+
+    pub fn create_bishop_move_counts() -> ChessBoard<u64> {
+        ChessBoard([
+            6, 5, 5, 5, 5, 5, 5, 6, 
+            5, 5, 5, 5, 5, 5, 5, 5, 
+            5, 5, 7, 7, 7, 7, 5, 5, 
+            5, 5, 7, 9, 9, 7, 5, 5, 
+            5, 5, 7, 9, 9, 7, 5, 5, 
+            5, 5, 7, 7, 7, 7, 5, 5, 
+            5, 5, 5, 5, 5, 5, 5, 5, 
+            6, 5, 5, 5, 5, 5, 5, 6
+        ])
+    }
+
+    pub fn create_rook_move_counts() -> ChessBoard<u64> {
+        ChessBoard([
+            12, 11, 11, 11, 11, 11, 11, 12, 
+            11, 10, 10, 10, 10, 10, 10, 11, 
+            11, 10, 10, 10, 10, 10, 10, 11, 
+            11, 10, 10, 10, 10, 10, 10, 11, 
+            11, 10, 10, 10, 10, 10, 10, 11, 
+            11, 10, 10, 10, 10, 10, 10, 11, 
+            11, 10, 10, 10, 10, 10, 10, 11, 
+            12, 11, 11, 11, 11, 11, 11, 12
+            ])
+        }
+
+    pub fn create_rook_magics() -> ChessBoard<MagicNum> {
+        ChessBoard([
+            MagicNum(0x8A80104000800020), MagicNum(0xC40100040082000),  MagicNum(0x100102001000840),  MagicNum(0x1080041000080080), 
+            MagicNum(0x4280240080020800), MagicNum(0x4800A00211C0080),  MagicNum(0x1080008001000200), MagicNum(0x42000082C9020424), 
+            MagicNum(0x2002081004200),    MagicNum(0x2002081004200),    MagicNum(0x801000802000),     MagicNum(0x201001000082100), 
+            MagicNum(0xE41001005000800),  MagicNum(0x1022001008854200), MagicNum(0x211000100020084),  MagicNum(0x18801041000080), 
+            MagicNum(0x80084000200040),   MagicNum(0x20A0024000500020), MagicNum(0x80410010200901),   MagicNum(0x2083090010002300), 
+            MagicNum(0x808004000800),     MagicNum(0x804008080040200),  MagicNum(0x8800040002100108), MagicNum(0x20001208044), 
+            MagicNum(0x4020800080204000), MagicNum(0x40008280200042),   MagicNum(0x820200204010),     MagicNum(0x200100480080080), 
+            MagicNum(0x300040080080080),  MagicNum(0x804008080040200),  MagicNum(0x8000020400881001), MagicNum(0x88808200204401), 
+            MagicNum(0x6480042006400041), MagicNum(0x4080804000802000), MagicNum(0x801000802000),     MagicNum(0x1518001000800882), 
+            MagicNum(0xE41001005000800),  MagicNum(0x1012001002000408), MagicNum(0x140108804006201),  MagicNum(0x2050882000054), 
+            MagicNum(0x90080C000618011),  MagicNum(0xA0004000208080),   MagicNum(0x22001080220043),   MagicNum(0x1012010050008), 
+            MagicNum(0x40008008080),      MagicNum(0x1100040002008080), MagicNum(0x40100182040008),   MagicNum(0x800000648102000C), 
+            MagicNum(0x481248002C90100),  MagicNum(0x2002081004200),    MagicNum(0x400C802211420200), MagicNum(0x280200C10010100), 
+            MagicNum(0x300040080080080),  MagicNum(0x1100040002008080), MagicNum(0x4000018802100400), MagicNum(0x4310800100004080), 
+            MagicNum(0x4024800508102041), MagicNum(0x88801100204001),   MagicNum(0x401080104200200A), MagicNum(0x8010210408100101), 
+            MagicNum(0x9202002005881002), MagicNum(0x8012004824011022), MagicNum(0x2000011002080084), MagicNum(0x1010549228402), 
+        ])
+    }
+
+    pub fn create_bishop_magics() -> ChessBoard<MagicNum> {
+        ChessBoard([
+            MagicNum(0x40040822862081),   MagicNum(0x10201A0200411402), MagicNum(0x81024288020C000),  MagicNum(0x1404640080008810), 
+            MagicNum(0x9004242000012008), MagicNum(0x10A412020A04008),  MagicNum(0x1000989008208000), MagicNum(0x22010108410402), 
+            MagicNum(0x2104840810014200), MagicNum(0x2150210810A080),   MagicNum(0x81080089061040),   MagicNum(0x2400A82040408008), 
+            MagicNum(0x240420005810),     MagicNum(0x4200022860180000), MagicNum(0x4000090082504000), MagicNum(0x410402422220), 
+            MagicNum(0x8140420C80200),    MagicNum(0x2038A4832080200),  MagicNum(0xC108005006404048), MagicNum(0x2208001041404049), 
+            MagicNum(0xC014021880A01000), MagicNum(0x704200110101006),  MagicNum(0x2808C12013100),    MagicNum(0x6400411200444402), 
+            MagicNum(0x124240A1041400),   MagicNum(0x8802088010100088), MagicNum(0x4020040408508),    MagicNum(0x604080004006128), 
+            MagicNum(0x8000848004002004), MagicNum(0x4008020008405210), MagicNum(0x806000AA22902),    MagicNum(0x2200888682020080), 
+            MagicNum(0x10C2105000400320), MagicNum(0x8018010800102208), MagicNum(0x4000841102100044), MagicNum(0x200800050104), 
+            MagicNum(0x160C030400280408), MagicNum(0x820080320094405),  MagicNum(0x201E40100540101),  MagicNum(0x8408248080002227), 
+            MagicNum(0x8021004001040),    MagicNum(0x400455030034803),  MagicNum(0x912020322180400),  MagicNum(0x8026013002800), 
+            MagicNum(0xE000040810130200), MagicNum(0x2168500092000020), MagicNum(0x2002304119002200), MagicNum(0x1901020400400510), 
+            MagicNum(0x1000989008208000), MagicNum(0x100840108020006),  MagicNum(0x3010020842088080), MagicNum(0x8000001B84044881), 
+            MagicNum(0x8004404010510072), MagicNum(0xC10801010000),     MagicNum(0x4090808148101),    MagicNum(0x10201A0200411402), 
+            MagicNum(0x22010108410402),   MagicNum(0x410402422220),     MagicNum(0x41000114204D004),  MagicNum(0x4082000100840440), 
+            MagicNum(0x400C802211420200), MagicNum(0x81800140828C8100), MagicNum(0x2104840810014200), MagicNum(0x40040822862081), 
+        ])
+    }
 }

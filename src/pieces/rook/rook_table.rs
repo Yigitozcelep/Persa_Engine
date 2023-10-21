@@ -1,13 +1,12 @@
-use crate::constants::board_constants::*;
 use crate::constants::directions::*;
-use crate::pieces::helper_functions::{get_possible_occupancy};
-use crate::board_components::{Board, Square};
+use crate::constants::board_constants::{ROOK_MAX_BLOCK_PERM, create_rook_move_counts, create_rook_magics};
+use crate::board_components::{BitBoard, Square};
+use crate::pieces::pieces_structs::SliderPieceTable;
 
-
-pub fn mask_rook_attacks(square: Square) -> Board {
+pub fn mask_rook_attacks(square: Square) -> BitBoard {
     let rank = square.get_rank();
     let file = square.get_file();
-    let mut attacks = Board::new();
+    let mut attacks = BitBoard::new();
 
     for i in 1..7 - file {attacks.set_bit(square + EAST * i);}
 
@@ -19,10 +18,10 @@ pub fn mask_rook_attacks(square: Square) -> Board {
     attacks
 }
 
-pub fn rook_attacks_on_fly(square: Square, blockers: Board) -> Board {
+pub fn rook_attacks_on_fly(square: Square, blockers: BitBoard) -> BitBoard {
     let rank = square.get_rank();
     let file = square.get_file();
-    let mut attacks = Board::new();
+    let mut attacks = BitBoard::new();
     for i in 1..8 - file {
         attacks.set_bit(square + EAST * i);
         if blockers.is_square_set(square + EAST * i) {break;}
@@ -44,13 +43,7 @@ pub fn rook_attacks_on_fly(square: Square, blockers: Board) -> Board {
     attacks
 }
 
-
-pub fn create_rook_table() {
-    for square in 0..1 {
-        let attack = rook_attacks_on_fly(Square(square), Board::new()) & !CORNERS;
-        for index in 0..4096 {
-            println!("-----------------------------\nindex: {}", index);
-            get_possible_occupancy(attack, Board(index as u64));
-        }
-    }
+#[inline(always)]
+pub fn create_rook_table() -> SliderPieceTable<ROOK_MAX_BLOCK_PERM> {
+    SliderPieceTable::new(create_rook_move_counts(), mask_rook_attacks, rook_attacks_on_fly, create_rook_magics())
 }

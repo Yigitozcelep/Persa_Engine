@@ -51,7 +51,7 @@ macro_rules! impl_all_ops {
         impl_op!($struct_name, std::ops::Sub, sub, $field);
 
         impl_indv_bit_op!($struct_name, std::ops::Not, not, $field);
-
+        
         impl_shift_op!($struct_name, std::ops::Shl<u64>, shl, $field);
         impl_shift_op!($struct_name, std::ops::Shr<u64>, shr, $field);
     };
