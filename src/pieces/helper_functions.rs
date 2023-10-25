@@ -1,5 +1,23 @@
 use crate::board_components::{BitBoard, Square, MagicNumGenerator, MagicNum, ChessBoard};
 use crate::constants::board_constants::EMPTY_BITBOARD;
+use crate::pieces::rook::rook_table::initialize_rook_components;
+use crate::pieces::bishop::bishop_table::initialize_bishop_components;
+use crate::pieces::pawn::pawn_table::initialize_pawn_table;
+use crate::pieces::knight::knight_table::initialize_knight_table;
+use crate::pieces::king::king_table::initialize_king_table;
+use std::sync::Once;
+
+static INIT: Once = Once::new();
+// Make sure that it called once
+pub fn init_statics() {
+    INIT.call_once( || {
+        initialize_bishop_components();
+        initialize_rook_components();
+        initialize_pawn_table();
+        initialize_knight_table();
+        initialize_king_table();
+    });
+}
 
 pub fn get_possible_occupancy(bitboard: BitBoard, index: u64) -> BitBoard {
     let mut occupancy =  BitBoard::new();
@@ -41,4 +59,29 @@ pub fn find_magic_number(mask_attacks: fn(Square) -> BitBoard, attack_on_fly: fn
     }
     
   unreachable!()
+}
+
+pub fn initialize_slider_table<const LEN: usize>(table: &mut ChessBoard<[BitBoard; LEN]>,  magics: &ChessBoard<MagicNum>, mask_attacks: fn(Square) -> BitBoard, attack_on_fly: fn(Square, BitBoard) -> BitBoard) {
+    for square in Square::create_squares(0, 64) {
+        let attack = mask_attacks(square);
+        let move_count = attack.count_ones();
+        let total_mask_pos = 2_u64.pow(move_count);
+        for index in 0..total_mask_pos {
+            let occupancy = get_possible_occupancy(attack, index);
+            let magic_index = (occupancy * magics[square]) >> (64 - move_count);
+            table[square][magic_index as usize] = attack_on_fly(square, occupancy);
+        }
+    }
+}
+
+pub fn initialize_slider_attacks(mask_attacks: fn(Square) -> BitBoard, attacks: &mut ChessBoard<BitBoard>) {
+    for square in Square::create_squares(0, 64) {attacks[square] = mask_attacks(square);}
+}
+
+#[inline(always)]
+pub fn generate_slider_moves<const LEN: usize> (square: Square, board: BitBoard, attacks: &ChessBoard<BitBoard>, 
+    magics: &ChessBoard<MagicNum>, table: &ChessBoard<[BitBoard; LEN]>, move_counts: &ChessBoard<u64>) -> BitBoard {
+    let occupancy = board & attacks[square];
+    let magic_index = (occupancy * magics[square]) >> (64 - move_counts[square]);
+    table[square][magic_index as usize]
 }

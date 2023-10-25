@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr, Not, Add, Mul, Index, IndexMut};
+use std::{ops::{BitAnd, BitOr, Not, Add, Mul, Index, IndexMut}, fmt::Display};
 use crate::{impl_op, impl_indv_bit_op};
 
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
@@ -18,9 +18,8 @@ impl Mul<MagicNum> for BitBoard {
 }
 
 impl BitBoard {
-    #[inline(always)]
-    pub fn new() -> Self { Self(0) }
-
+    pub const fn new() -> Self { Self(0) }
+    
     #[inline(always)]
     pub fn from_u64(num: u64) -> Self { Self(num) }
 
@@ -76,6 +75,29 @@ impl BitBoard {
         self.0 = self.0 & self.0 - 1;
         result
     }
+
+
+    pub fn get_bitboard_string<T: Display>(data: [T; 64]) -> String {
+        let first_space = " ".repeat(20);
+        let second_space = " ".repeat(2);
+        let mut result = format!("\n{} {}+-----------------+\n", first_space, second_space);
+        for rank in (0..8).rev() {
+            result += &format!("{}{}{}| ", first_space, (rank + 1).to_string(), second_space);
+            for file in 0..8 {
+                let square = rank * 8 + file;
+                result += &format!("{} ", data[square]);
+            }
+            result += &format!("|\n");
+        }
+        result += &format!("{} {}+-----------------+\n\n", first_space, second_space);
+        let files = ["A","B","C","D","E","F","G","H"];
+            result += &format!("{} {}  ", first_space, second_space);
+            for i in 0..8 {
+                result += &format!("{} ", files[i]);
+            }
+        result += &format!("\n\n");
+        result
+    }
 }
 
 impl Iterator for BitBoard {
@@ -91,29 +113,15 @@ impl Iterator for BitBoard {
 
 impl std::fmt::Display for BitBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let first_space = " ".repeat(20);
-        let second_space = " ".repeat(2);
-        let mut result = format!("\n{} {}+-----------------+\n", first_space, second_space);
-        for i in (0..8).rev() {
-            result += &format!("{}{}{}| ", first_space, (i + 1).to_string(), second_space);
-            for j in 0..8 {
-                let shift = i * 8 + j;
-                let bit = (self.0 & (1 << shift)) >> shift;
-                result += &format!("{} ", bit);
-    
-            }
-            result += &format!("|\n");
+        let mut data = ["0"; 64];
+        for square in Square::create_squares(0, 64) {
+            if self.is_square_set(square) {data[square.0 as usize] = "1"}
         }
-        result += &format!("{} {}+-----------------+\n\n", first_space, second_space);
-        let files = ["A","B","C","D","E","F","G","H"];
-        result += &format!("{} {}  ", first_space, second_space);
-        for i in 0..8 {
-            result += &format!("{} ", files[i]);
-        }
-        result += &format!("\n\n");
+        let result = Self::get_bitboard_string(data);
         write!(f, "{}", result)
     }
 }
+
 
 #[derive(Clone, Copy)]
 pub struct Square(pub u8);
@@ -168,6 +176,7 @@ impl Mul<u8> for Direction {
 }
 
 #[repr(usize)]
+#[derive(Clone, Copy)]
 pub enum Color {
     White = 0,
     Black = 1,
@@ -200,13 +209,14 @@ impl MagicNumGenerator {
         MagicNum(self.get_random_u64() & self.get_random_u64() & self.get_random_u64())
     }
 }
+
 #[derive(Clone, Copy, Debug)]
 pub struct MagicNum(pub u64);
 
 pub struct ChessBoard<T>(pub [T; 64]);
 
 impl <T> ChessBoard<T> {
-    pub fn from(data: [T; 64]) -> Self {
+    pub const fn from(data: [T; 64]) -> Self {
         Self(data)
     }
 

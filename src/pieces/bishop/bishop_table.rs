@@ -1,9 +1,14 @@
-use crate::constants::board_constants::EDGES;
 use crate::constants::directions::*;
-use crate::board_components::{BitBoard, Square};
+use crate::constants::board_constants::EDGES;
+use crate::board_components::{BitBoard, Square, ChessBoard, MagicNum};
 use crate::constants::board_constants::{BISHOP_MAX_BLOCK_PERM, create_bishop_move_counts, create_bishop_magics};
-use crate::pieces::pieces_structs::SliderPieceTable;
+use crate::pieces::helper_functions::{initialize_slider_attacks, initialize_slider_table, generate_slider_moves};
 use std::cmp::{min, max};
+
+static mut BISHOP_TABLE: ChessBoard<[BitBoard; BISHOP_MAX_BLOCK_PERM]> = ChessBoard::from([[BitBoard::new(); BISHOP_MAX_BLOCK_PERM]; 64]);
+static mut BISHOP_ATTACKS: ChessBoard<BitBoard> = ChessBoard::from([BitBoard::new(); 64]);
+static BISHOP_MOVES_COUNTS: ChessBoard<u64> = create_bishop_move_counts();
+static BISHOP_MAGICS: ChessBoard<MagicNum> = create_bishop_magics();
 
 pub fn mask_bishop_attacks(square: Square) -> BitBoard {
     bishop_attacks_on_fly(square, BitBoard::new()) & !EDGES
@@ -37,6 +42,11 @@ pub fn bishop_attacks_on_fly(square: Square, blocker: BitBoard) -> BitBoard {
 }
 
 #[inline(always)]
-pub fn create_bishop_table() -> SliderPieceTable<BISHOP_MAX_BLOCK_PERM> {
-    SliderPieceTable::new(create_bishop_move_counts(), mask_bishop_attacks, bishop_attacks_on_fly, create_bishop_magics())
+pub fn generate_bishop_attacks(square: Square, board: BitBoard) -> BitBoard {
+    unsafe {generate_slider_moves(square, board, &BISHOP_ATTACKS, &BISHOP_MAGICS, &BISHOP_TABLE, &BISHOP_MOVES_COUNTS)}
+}
+
+pub fn initialize_bishop_components() {
+    unsafe {initialize_slider_table(&mut BISHOP_TABLE, &BISHOP_MAGICS, mask_bishop_attacks, bishop_attacks_on_fly);}
+    unsafe {initialize_slider_attacks(mask_bishop_attacks, &mut BISHOP_ATTACKS)}
 }

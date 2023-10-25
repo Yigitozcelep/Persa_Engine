@@ -5,5 +5,4 @@ pub mod pawn;
 pub mod queen;
 pub mod rook;
 pub mod helper_functions;
-pub mod pieces_macros;
-pub mod pieces_structs;
+pub mod pieces_controller;

@@ -1,19 +1,14 @@
-use crate::board_components::{BitBoard, Square};
+use crate::board_components::{BitBoard, Square, ChessBoard};
 use crate::constants::board_constants::*;
 use crate::constants::directions::*;
-use crate::impl_square_index;
 
-pub struct KingTable([BitBoard; 64]);
+static mut KING_TABLE: ChessBoard<BitBoard> = ChessBoard::from([BitBoard::new(); 64]);
 
-impl KingTable {
-    pub fn new() -> Self {
-        let king_table: [BitBoard; 64] = Square::create_squares(0, 64)
-                                            .map(|square| mask_king_attacks(square))
-                                            .collect::<Vec<_>>().try_into().unwrap();
-        Self(king_table)
+pub fn initialize_king_table() {
+    for square in Square::create_squares(0, 64) {
+        unsafe {KING_TABLE[square] = mask_king_attacks(square);}
     }
 }
-impl_square_index!(KingTable, BitBoard, 0);
 
 fn mask_king_attacks(square: Square) -> BitBoard {
     let mut attack = BitBoard::new();
@@ -27,4 +22,9 @@ fn mask_king_attacks(square: Square) -> BitBoard {
     if !(RANK8 | A_FILE).is_square_set(square) {attack.set_bit(square + NORTH_WEST);}
     
     attack
+}
+
+#[inline(always)]
+pub fn generate_king_attacks(square: Square) -> BitBoard{
+    unsafe {KING_TABLE[square]}
 }

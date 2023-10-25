@@ -1,24 +1,15 @@
-use crate::board_components::{BitBoard, Square, Color};
-use std::ops::Index;
+use crate::board_components::{BitBoard, Square, Color, ChessBoard};
 use crate::constants::board_constants::*;
 use crate::constants::directions::*;
 
-pub struct PawnTable([[BitBoard; 64]; 2]);
+pub static mut PAWN_TABLE: [ChessBoard<BitBoard>; 2] = [ChessBoard::from([BitBoard::new(); 64]), ChessBoard::from([BitBoard::new(); 64])];
 
-impl PawnTable {
-    pub fn new() -> Self {
-        let pawn_table: [[BitBoard; 64]; 2] = [
-            Square::create_squares(0, 64).map(|square| mask_pawn_attacks(Color::White, square)).collect::<Vec<_>>().try_into().unwrap(),
-            Square::create_squares(0, 64).map(|square| mask_pawn_attacks(Color::Black, square)).collect::<Vec<_>>().try_into().unwrap(),
-        ];
-        Self(pawn_table)
-    }
-}
-
-impl Index<(Square, Color)> for PawnTable {
-    type Output = BitBoard;
-    fn index(&self, index: (Square, Color)) -> &Self::Output {
-        &self.0[index.0.0 as usize][index.1 as usize]
+pub fn initialize_pawn_table() {
+    for square in Square::create_squares(0, 64) {
+        unsafe {
+            PAWN_TABLE[Color::White as usize][square] = mask_pawn_attacks(Color::White, square);
+            PAWN_TABLE[Color::Black as usize][square] = mask_pawn_attacks(Color::Black, square);
+        }
     }
 }
 
@@ -37,4 +28,9 @@ fn mask_pawn_attacks(side: Color, square: Square) -> BitBoard {
         }
     }
     return attack;
+}
+
+#[inline(always)]
+pub fn genereate_pawn_attacks(square: Square, side: Color) -> BitBoard {
+    unsafe {PAWN_TABLE[side as usize][square]}
 }
