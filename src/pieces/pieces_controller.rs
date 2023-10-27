@@ -5,10 +5,8 @@ use crate::pieces::knight::knight_table::generate_knight_attacks;
 use crate::pieces::pawn::pawn_table::genereate_pawn_attacks;
 use crate::pieces::queen::queen_table::generate_queen_attacks;
 use crate::pieces::rook::rook_table::generate_rook_attakcs;
-
+use crate::constants::board_constants::{UNICODE_PIECES, EMPTY_BITBOARD};
 use std::ops::Index;
-pub static ASCII_PIECES: [&'static str; 12] = ["p", "n", "b", "r", "q", "k", "P", "N", "B", "R", "Q", "K"];
-pub static UNICODE_PIECES: [char; 12] =       ['♟', '♞', '♝', '♜', '♛', '♚', '♙', '♘', '♗', '♖', '♕', '♔'];
 
 
 
@@ -23,7 +21,7 @@ pub struct BoardStatus (pub [BitBoard; 15]);
 
 #[repr(usize)]
 #[derive(Clone, Copy)]
-pub enum BoardStatusIndex {
+pub enum BoardSlots {
     WhitePawn   = 0,
     WhiteKnight = 1,
     WhiteBishop = 2,
@@ -43,25 +41,25 @@ pub enum BoardStatusIndex {
     AllPieces   = 14,
 }
 
-impl Index<BoardStatusIndex> for BoardStatus {
+impl Index<BoardSlots> for BoardStatus {
     type Output = BitBoard;
-    fn index(&self, index: BoardStatusIndex) -> &Self::Output {
+    fn index(&self, index: BoardSlots) -> &Self::Output {
         &self.0[index as usize]
     }
 }
 
 impl BoardStatus {
-
+ 
     #[inline(always)]
     pub const fn new() -> Self {
         Self([BitBoard::new(); 15])
     }
 
-    pub fn set_piece_bit(&mut self, piece: BoardStatusIndex, square: Square) {
+    pub fn set_piece_bit(&mut self, piece: BoardSlots, square: Square) {
         let i = (piece as usize) / 6;
         self.0[piece as usize].set_bit(square);
         self.0[13 - i].set_bit(square);
-        self.0[BoardStatusIndex::AllPieces as usize].set_bit(square);
+        self.0[BoardSlots::AllPieces as usize].set_bit(square);
     }
 
     #[inline(always)]
@@ -69,7 +67,7 @@ impl BoardStatus {
         let start = (side as usize) * 6;
         let mut attacks = BitBoard::new();
         let board = self.0.clone();
-        let all_pieces = self[BoardStatusIndex::AllPieces];
+        let all_pieces = self[BoardSlots::AllPieces];
         for sqaure in board[start]     {attacks = attacks | genereate_pawn_attacks(sqaure, side);}
         for sqaure in board[start + 1] {attacks = attacks | generate_knight_attacks(sqaure);}
         for sqaure in board[start + 2] {attacks = attacks | generate_bishop_attacks(sqaure, all_pieces);}
@@ -80,13 +78,35 @@ impl BoardStatus {
         attacks
     }
     #[inline(always)]
+    pub fn is_square_attacked(&self, side: Color, square: Square) -> bool {
+        let knight_attack  = generate_knight_attacks(square);
+        let king_attack    = generate_king_attacks(square);
+        let bishop_attacks = generate_bishop_attacks(square, self[BoardSlots::AllPieces]);
+        let rook_attacks   = generate_rook_attakcs(square,   self[BoardSlots::AllPieces]);
+        let queen_attacks  = bishop_attacks | rook_attacks;
+        match side {
+            Color::White => {
+                (genereate_pawn_attacks(square, Color::Black) & self[BoardSlots::BlackPawn] |
+                knight_attack  & self[BoardSlots::BlackKnight] |
+                bishop_attacks & self[BoardSlots::BlackBishop] |
+                rook_attacks   & self[BoardSlots::BlackRook]   |
+                queen_attacks  & self[BoardSlots::BlackKing]   |
+                king_attack    & self[BoardSlots::BlackKing]) != EMPTY_BITBOARD
+            }
+            Color::Black => {
+                (genereate_pawn_attacks(square, Color::White) & self[BoardSlots::WhitePawn] |
+                knight_attack  & self[BoardSlots::WhiteKnight] |
+                bishop_attacks & self[BoardSlots::WhiteBishop] |
+                rook_attacks   & self[BoardSlots::WhiteRook]   |
+                queen_attacks  & self[BoardSlots::WhiteKing]   |
+                king_attack    & self[BoardSlots::WhiteKing]) != EMPTY_BITBOARD
+            }
+        }
+    }
+    
+    #[inline(always)]
     pub const fn get_other_side_pieces(&self, side: Color) -> BitBoard{
         self.0[side as usize + 12]
-    }
-
-    #[inline(always)]
-    pub fn is_square_attacked(&self, square: Square, side: Color) -> bool {
-        self.get_other_side_pieces(side).is_square_set(square)
     }
 
 }
@@ -103,49 +123,4 @@ impl std::fmt::Display for BoardStatus {
         let result = BitBoard::get_bitboard_string(data);
         writeln!(f, "{}", result)
     }
-}
-
-pub fn str_to_piece(asci_piece: &str) -> BoardStatusIndex {
-    match asci_piece {
-      "P" => BoardStatusIndex::WhitePawn,
-      "N" => BoardStatusIndex::WhiteKnight,
-      "B" => BoardStatusIndex::WhiteBishop,
-      "R" => BoardStatusIndex::WhiteRook,
-      "Q" => BoardStatusIndex::WhiteQueen,
-      "K" => BoardStatusIndex::WhiteKing,
-      
-      "p" => BoardStatusIndex::BlackPawn,
-      "n" => BoardStatusIndex::BlackKnight,
-      "b" => BoardStatusIndex::BlackBishop,
-      "r" => BoardStatusIndex::BlackRook,
-      "q" => BoardStatusIndex::BlackQueen,
-      "k" => BoardStatusIndex::BlackKing,
-        _ => panic!("invalid string piece")
-    }
-}
-
-
-pub fn print_fen_board(fen: String) {
-    let mut data = ['.'; 64];
-    let mut square = 56; // A8
-    for c in fen.chars() {
-        if c.is_numeric() {
-            for _ in 0..c.to_digit(10).unwrap() {
-                data[square] = '.';
-                square += 1;
-            }
-        }
-        else if c == '/' {square -= 16;} // below rank first square A1, A2 .. A7 
-        else {
-            data[square] = c;
-            square += 1;
-        }
-    }
-    let mut res = BitBoard::get_bitboard_string(data);
-    for &s in &ASCII_PIECES {
-        let piece = str_to_piece(s);
-        let unicode = UNICODE_PIECES[piece as usize];
-        res = res.replace(s, &unicode.to_string());
-    }
-    println!("{}", res);
 }

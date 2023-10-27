@@ -176,11 +176,12 @@ impl Mul<u8> for Direction {
 }
 
 #[repr(usize)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Color {
     White = 0,
     Black = 1,
 }
+
 
 pub struct MagicNumGenerator(u32);
 impl MagicNumGenerator {
