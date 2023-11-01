@@ -75,7 +75,11 @@ impl BitBoard {
         self.0 = self.0 & self.0 - 1;
         result
     }
+    
+    #[inline(always)]
+    pub fn pop_lsb(&mut self) {
 
+    }
 
     pub fn get_bitboard_string<T: Display>(data: [T; 64]) -> String {
         let first_space = " ".repeat(20);

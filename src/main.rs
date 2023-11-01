@@ -5,17 +5,12 @@ pub mod helper_macros;
 pub mod debug;
 
 
-use board_components::Square;
-use constants::squares::*;
-use debug::FenString;
+use constants::squares::{A3, B2};
 
 use crate::pieces::helper_functions::init_statics;
+use crate::pieces::pieces_controller::{MoveBitField, MoveList, BoardSlots};
 
 fn main() {
     init_statics();
-    let fen = FenString::new("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R".to_string());
-    let data = fen.convert_to_board();
-    let res = data.is_square_attacked(board_components::Color::White, A5);
-    println!("{}", fen);
-    println!("{}", res);
+    
 }

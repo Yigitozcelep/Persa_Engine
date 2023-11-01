@@ -116,10 +116,8 @@ pub mod board_constants {
     pub const BOTTOM_2_RANK:      BitBoard =   BitBoard(0x000000000000FFFF);
     pub const LEFT_2_FILE:        BitBoard =   BitBoard(0x0303030303030303);
 
-    pub static ASCII_PIECES: [&'static str; 12] = ["p", "n", "b", "r", "q", "k", "P", "N", "B", "R", "Q", "K"];
+    pub static ASCII_PIECES: [&'static str; 12] = ["P", "N", "B", "R", "Q", "K", "p", "n", "b", "r", "q", "k"];
     pub static UNICODE_PIECES: [char; 12] =       ['♟', '♞', '♝', '♜', '♛', '♚', '♙', '♘', '♗', '♖', '♕', '♔'];
-
-
 
     pub const fn create_bishop_move_counts() -> ChessBoard<u64> {
         ChessBoard([
