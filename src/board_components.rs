@@ -127,7 +127,7 @@ impl std::fmt::Display for BitBoard {
 }
 
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Square(pub u8);
 
 impl Square {   

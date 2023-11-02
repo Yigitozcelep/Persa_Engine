@@ -74,7 +74,7 @@ pub mod squares {
     pub const F8: Square = Square(61);
     pub const G8: Square = Square(62);
     pub const H8: Square = Square(63);
-
+    pub const NO_SQUARE: Square = Square(64);
 }
 
 
