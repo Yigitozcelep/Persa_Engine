@@ -15,9 +15,12 @@ fn main() {
     
     let data = FenString::new("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1".to_string());
     let mut res = data.convert_to_board();
+    res.change_color();
+    let mut move_list = MoveList::new();
     println!("{}", res);
-    let x = FenString::from_board(&res);
-    println!("{}", x);
+    move_list.generate_moves(&res);
+    println!("{}", move_list);
+    
     
     
 }

@@ -258,8 +258,6 @@ impl MoveBitField {
     pub fn is_move_castling(&self) -> bool { (self.0 & 0x800000) != 0 }
 }
 
-#[inline(always)]
-pub fn generate_knight_moves() {}
 
 #[inline(always)]
 pub fn generate_bishop_moves() {}
@@ -315,11 +313,11 @@ impl MoveList {
     }
 
     #[inline(always)]
-    pub fn generate_pawn_moves(&mut self, board: BitBoard, board_status: &BoardStatus, mov_dir: Direction, 
+    pub fn generate_pawn_moves(&mut self, board_status: &BoardStatus, mov_dir: Direction, 
         double_move_line: BitBoard, fnish_line: BitBoard, pawn: BoardSlots, enemy_color: Color, queen: BoardSlots, 
         rook: BoardSlots, bishop: BoardSlots, knight: BoardSlots, enemy_pieces: BoardSlots) {
         
-        for square in board {
+        for square in board_status[pawn].clone() {
             let target = square + mov_dir;
             if board_status[BoardSlots::AllPieces].is_square_set(target) { continue; }
             if fnish_line.is_square_set(target) {
@@ -354,17 +352,56 @@ impl MoveList {
             }
         }
     }
+    #[inline(always)]
+    fn generate_slider_moves(&mut self, gen_moves: fn(Square, BitBoard) -> BitBoard, board_status: &BoardStatus, 
+        piece: BoardSlots, my_pieces: BoardSlots, enemy_pieces: BoardSlots) {
+        for square in board_status[piece].clone() {
+            let attacks = gen_moves(square, board_status[BoardSlots::AllPieces]) & !board_status[my_pieces];
+            for attack in attacks {
+                if board_status[enemy_pieces].is_square_set(attack) {
+                    self.append_move(MoveBitField::new(piece, square, attack).set_capture())
+                }
+                else {
+                    self.append_move(MoveBitField::new(piece, square, attack))
+                }
+            }
+        }   
+    }
+    #[inline(always)]
+    fn generate_knight_attacks(&mut self, board_status: &BoardStatus, piece: BoardSlots, my_pieces: BoardSlots, enemy_pieces: BoardSlots) {
+        for square in board_status[piece].clone() {
+            let attacks = generate_knight_attacks(square) & !board_status[my_pieces];
+            for attack in attacks {
+                if board_status[enemy_pieces].is_square_set(attack) {
+                    self.append_move(MoveBitField::new(piece, square, attack).set_capture())
+                }
+                else {
+                    self.append_move(MoveBitField::new(piece, square, attack))
+                }
+            }
+        }   
+    }
 
-    pub fn generate_moves(&mut self, board_status: BoardStatus) {
+    pub fn generate_moves(&mut self, board_status: &BoardStatus) {
         match board_status.color {
-            Color::White => self.generate_pawn_moves(board_status[BoardSlots::WhitePawn], &board_status, NORTH, RANK2, RANK8, BoardSlots::WhitePawn, Color::Black, BoardSlots::WhiteQueen, BoardSlots::WhiteRook, BoardSlots::WhiteBishop, BoardSlots::WhiteKnight, BoardSlots::BlackPieces),
-            Color::Black => self.generate_pawn_moves(board_status[BoardSlots::BlackPawn], &board_status, SOUTH, RANK7, RANK1, BoardSlots::BlackPawn, Color::White, BoardSlots::BlackQueen, BoardSlots::BlackRook, BoardSlots::BlackBishop, BoardSlots::BlackKnight, BoardSlots::WhitePieces)
+            Color::White => {
+                self.generate_pawn_moves(&board_status, NORTH, RANK2, RANK8, BoardSlots::WhitePawn, Color::Black, BoardSlots::WhiteQueen, BoardSlots::WhiteRook, BoardSlots::WhiteBishop, BoardSlots::WhiteKnight, BoardSlots::BlackPieces);
+                self.generate_knight_attacks(&board_status, BoardSlots::WhiteKnight, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                self.generate_slider_moves(generate_bishop_attacks, board_status, BoardSlots::WhiteBishop, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                self.generate_slider_moves(generate_rook_attakcs,   board_status, BoardSlots::WhiteRook,   BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                self.generate_slider_moves(generate_queen_attacks,  board_status, BoardSlots::WhiteQueen,  BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                generate_king_moves();
+            }
+            Color::Black => {
+                self.generate_pawn_moves(&board_status, SOUTH, RANK7, RANK1, BoardSlots::BlackPawn, Color::White, BoardSlots::BlackQueen, BoardSlots::BlackRook, BoardSlots::BlackBishop, BoardSlots::BlackKnight, BoardSlots::WhitePieces);
+                self.generate_knight_attacks(&board_status, BoardSlots::BlackKnight, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                self.generate_slider_moves(generate_bishop_attacks, board_status, BoardSlots::BlackBishop, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                self.generate_slider_moves(generate_rook_attakcs,   board_status, BoardSlots::BlackRook,   BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                self.generate_slider_moves(generate_queen_attacks,  board_status, BoardSlots::BlackQueen,  BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                generate_king_moves();
+            }
         }
-        generate_knight_moves();
-        generate_bishop_moves();
-        generate_rook_moves();
-        generate_queen_moves();
-        generate_king_moves();
+        
     }
     
 }
