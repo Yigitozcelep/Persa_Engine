@@ -7,8 +7,8 @@ pub mod debug;
 
 use debug::FenString;
 
-use crate::pieces::helper_functions::init_statics;
 use crate::pieces::pieces_controller::MoveList;
+use crate::pieces::tables::init_statics;
 
 fn main() {
     init_statics();
@@ -20,7 +20,5 @@ fn main() {
     println!("{}", res);
     move_list.generate_moves(&res);
     println!("{}", move_list);
-    
-    
     
 }
