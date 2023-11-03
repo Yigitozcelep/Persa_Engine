@@ -1,6 +1,6 @@
 use crate::board_components::{BitBoard, Color, Square, Direction};
-use crate::constants::directions::{NORTH, SOUTH};
-use crate::constants::squares::NO_SQUARE;
+use crate::constants::directions::{NORTH, SOUTH, WEST, EAST, NORTH_EAST};
+use crate::constants::squares::*;
 use crate::debug::FenString;
 use crate::pieces::tables::*;
 use crate::constants::board_constants::{EMPTY_BITBOARD, RANK1, RANK2, RANK7, RANK8};
@@ -126,61 +126,6 @@ impl BoardStatus {
         self.get_pieces_board(piece).set_bit(square);
         self.boards[BoardSlots::AllPieces as usize].set_bit(square);
     }
-
-    #[inline(always)]
-    pub fn get_attacked_squares(&self) -> BitBoard {
-        let mut attacks = BitBoard::new();
-        let board = self.boards.clone();
-        let all_pieces = self[BoardSlots::AllPieces];
-        match self.color {
-            Color::White => {
-                for sqaure in board[BoardSlots::WhitePawn   as usize] {attacks = attacks | genereate_pawn_attacks(sqaure, self.color);}
-                for sqaure in board[BoardSlots::WhiteKnight as usize] {attacks = attacks | generate_knight_attacks(sqaure);}
-                for sqaure in board[BoardSlots::WhiteBishop as usize] {attacks = attacks | generate_bishop_attacks(sqaure, all_pieces);}
-                for sqaure in board[BoardSlots::WhiteRook   as usize] {attacks = attacks | generate_rook_attakcs(sqaure, all_pieces);}
-                for sqaure in board[BoardSlots::WhiteQueen  as usize] {attacks = attacks | generate_queen_attacks(sqaure, all_pieces);}
-                for sqaure in board[BoardSlots::WhiteKing   as usize] {attacks = attacks | generate_king_attacks(sqaure);}
-            }
-            Color::Black => {
-                for sqaure in board[BoardSlots::BlackPawn   as usize] {attacks = attacks | genereate_pawn_attacks(sqaure, self.color);}
-                for sqaure in board[BoardSlots::BlackKnight as usize] {attacks = attacks | generate_knight_attacks(sqaure);}
-                for sqaure in board[BoardSlots::BlackBishop as usize] {attacks = attacks | generate_bishop_attacks(sqaure, all_pieces);}
-                for sqaure in board[BoardSlots::BlackRook   as usize] {attacks = attacks | generate_rook_attakcs(sqaure, all_pieces);}
-                for sqaure in board[BoardSlots::BlackQueen  as usize] {attacks = attacks | generate_queen_attacks(sqaure, all_pieces);}
-                for sqaure in board[BoardSlots::BlackKing   as usize] {attacks = attacks | generate_king_attacks(sqaure);}
-            }
-        }
-        attacks
-    }
-    #[inline(always)]
-    pub fn is_square_attacked_by_side(&self, square: Square) -> bool {
-        let knight_attack  = generate_knight_attacks(square);
-        let king_attack    = generate_king_attacks(square);
-        let bishop_attacks = generate_bishop_attacks(square, self[BoardSlots::AllPieces]);
-        let rook_attacks   = generate_rook_attakcs(square,   self[BoardSlots::AllPieces]);
-        let queen_attacks  = bishop_attacks | rook_attacks;
-        match self.color {
-            Color::White => {
-                (genereate_pawn_attacks(square, Color::Black) & self[BoardSlots::WhitePawn] |
-                knight_attack  & self[BoardSlots::WhiteKnight] |
-                bishop_attacks & self[BoardSlots::WhiteBishop] |
-                rook_attacks   & self[BoardSlots::WhiteRook]   |
-                queen_attacks  & self[BoardSlots::WhiteKing]   |
-                king_attack    & self[BoardSlots::WhiteKing]) != EMPTY_BITBOARD
-            }
-            Color::Black => {
-                (genereate_pawn_attacks(square, Color::White) & self[BoardSlots::BlackPawn] |
-                knight_attack  & self[BoardSlots::BlackKnight] |
-                bishop_attacks & self[BoardSlots::BlackBishop] |
-                rook_attacks   & self[BoardSlots::BlackRook]   |
-                queen_attacks  & self[BoardSlots::BlackKing]   |
-                king_attack    & self[BoardSlots::BlackKing]) != EMPTY_BITBOARD
-            }
-        }
-    }
-    
-   
-
 }
 
 impl std::fmt::Display for BoardStatus {
@@ -253,23 +198,9 @@ impl MoveBitField {
     pub fn is_move_castling(&self) -> bool { (self.0 & 0x800000) != 0 }
 }
 
-
-#[inline(always)]
-pub fn generate_bishop_moves() {}
-
-#[inline(always)]
-pub fn generate_rook_moves() {}
-
-#[inline(always)]
-pub fn generate_queen_moves() {}
-
-#[inline(always)]
-pub fn generate_king_moves() {}
-
-
 pub struct MoveList {
     moves: [MaybeUninit<MoveBitField>; 256],
-    count: usize,
+    pub count: usize,
 }
 
 impl std::fmt::Display for MoveList {
@@ -284,11 +215,41 @@ impl std::fmt::Display for MoveList {
             if self[index].is_move_capture() {result += &format!("Capture ");}
             if self[index].is_move_double() {result += &format!("Double ");}
             if self[index].is_move_enpassant() {result += &format!("Enpassant ");}
-            if self[index].is_move_castling() {result += &format!("Castling: ")};
+            if self[index].is_move_castling() {result += &format!("Castling ")};
             result += "\n";
         }
         writeln!(f, "{}", result)
     }
+}
+
+#[inline(always)]
+pub fn is_square_attacked_black(board_status: &BoardStatus, square: Square) -> bool {
+    let knight_attack  = generate_knight_attacks(square);
+    let king_attack    = generate_king_attacks(square);
+    let bishop_attacks = generate_bishop_attacks(square, board_status[BoardSlots::AllPieces]);
+    let rook_attacks   = generate_rook_attakcs(square,   board_status[BoardSlots::AllPieces]);
+    let queen_attacks  = bishop_attacks | rook_attacks;
+    (genereate_pawn_attacks(square, Color::Black) & board_status[BoardSlots::WhitePawn] |
+    knight_attack  & board_status[BoardSlots::WhiteKnight] |
+    bishop_attacks & board_status[BoardSlots::WhiteBishop] |
+    rook_attacks   & board_status[BoardSlots::WhiteRook]   |
+    queen_attacks  & board_status[BoardSlots::WhiteKing]   |
+    king_attack    & board_status[BoardSlots::WhiteKing]) != EMPTY_BITBOARD
+
+}
+#[inline(always)]
+pub fn is_square_attacked_white(board_status: &BoardStatus, square: Square) -> bool {
+    let knight_attack  = generate_knight_attacks(square);
+    let king_attack    = generate_king_attacks(square);
+    let bishop_attacks = generate_bishop_attacks(square, board_status[BoardSlots::AllPieces]);
+    let rook_attacks   = generate_rook_attakcs(square,   board_status[BoardSlots::AllPieces]);
+    let queen_attacks  = bishop_attacks | rook_attacks;
+    (genereate_pawn_attacks(square, Color::White) & board_status[BoardSlots::BlackPawn] |
+    knight_attack  & board_status[BoardSlots::BlackKnight] |
+    bishop_attacks & board_status[BoardSlots::BlackBishop] |
+    rook_attacks   & board_status[BoardSlots::BlackRook]   |
+    queen_attacks  & board_status[BoardSlots::BlackKing]   |
+    king_attack    & board_status[BoardSlots::BlackKing]) != EMPTY_BITBOARD
 }
 
 impl MoveList {
@@ -308,7 +269,7 @@ impl MoveList {
     }
 
     #[inline(always)]
-    pub fn generate_pawn_moves(&mut self, board_status: &BoardStatus, mov_dir: Direction, 
+    fn generate_pawn_moves(&mut self, board_status: &BoardStatus, mov_dir: Direction, 
         double_move_line: BitBoard, fnish_line: BitBoard, pawn: BoardSlots, enemy_color: Color, queen: BoardSlots, 
         rook: BoardSlots, bishop: BoardSlots, knight: BoardSlots, enemy_pieces: BoardSlots) {
         
@@ -363,9 +324,9 @@ impl MoveList {
         }   
     }
     #[inline(always)]
-    fn generate_knight_attacks(&mut self, board_status: &BoardStatus, piece: BoardSlots, my_pieces: BoardSlots, enemy_pieces: BoardSlots) {
+    fn generate_non_sliding_moves(&mut self, gen_moves: fn(Square) -> BitBoard, board_status: &BoardStatus, piece: BoardSlots, my_pieces: BoardSlots, enemy_pieces: BoardSlots) {
         for square in board_status[piece].clone() {
-            let attacks = generate_knight_attacks(square) & !board_status[my_pieces];
+            let attacks = gen_moves(square) & !board_status[my_pieces];
             for attack in attacks {
                 if board_status[enemy_pieces].is_square_set(attack) {
                     self.append_move(MoveBitField::new(piece, square, attack).set_capture())
@@ -376,24 +337,41 @@ impl MoveList {
             }
         }   
     }
+    #[inline(always)]
+    fn generate_king_moves(&mut self, board_status: &BoardStatus, piece: BoardSlots, my_pieces: BoardSlots, enemy_pieces: BoardSlots,
+    king_pos: Square, king_side_castle: CastleSlots, queen_side_castle: CastleSlots, is_square_attacked: fn(&BoardStatus, Square) -> bool) {
+        
+        self.generate_non_sliding_moves(generate_king_attacks, board_status, piece, my_pieces, enemy_pieces);
+        let board = board_status[my_pieces];
+        if !is_square_attacked(board_status, king_pos) {
+            if board_status.can_castle(king_side_castle) && !is_square_attacked(board_status, king_pos + EAST) && !board.is_square_set(king_pos + EAST) && !board.is_square_set(king_pos + EAST * 2) {
+                self.append_move(MoveBitField::new(piece, king_pos, king_pos + EAST * 2).set_castling());
+            }
+            if board_status.can_castle(queen_side_castle) && !is_square_attacked(board_status, king_pos + WEST) && !is_square_attacked(board_status, king_pos + WEST * 2) && 
+            !board.is_square_set(king_pos + WEST) && !board.is_square_set(king_pos + WEST * 2) && !board.is_square_set(king_pos + WEST * 3) {
+                self.append_move(MoveBitField::new(piece, king_pos, king_pos + WEST * 3).set_castling())
+            }
+        }
+
+    }
 
     pub fn generate_moves(&mut self, board_status: &BoardStatus) {
         match board_status.color {
             Color::White => {
                 self.generate_pawn_moves(&board_status, NORTH, RANK2, RANK8, BoardSlots::WhitePawn, Color::Black, BoardSlots::WhiteQueen, BoardSlots::WhiteRook, BoardSlots::WhiteBishop, BoardSlots::WhiteKnight, BoardSlots::BlackPieces);
-                self.generate_knight_attacks(&board_status, BoardSlots::WhiteKnight, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                self.generate_non_sliding_moves(generate_knight_attacks, &board_status, BoardSlots::WhiteKnight, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
                 self.generate_slider_moves(generate_bishop_attacks, board_status, BoardSlots::WhiteBishop, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
                 self.generate_slider_moves(generate_rook_attakcs,   board_status, BoardSlots::WhiteRook,   BoardSlots::WhitePieces, BoardSlots::BlackPieces);
                 self.generate_slider_moves(generate_queen_attacks,  board_status, BoardSlots::WhiteQueen,  BoardSlots::WhitePieces, BoardSlots::BlackPieces);
-                generate_king_moves();
+                self.generate_king_moves(board_status, BoardSlots::WhiteKing, BoardSlots::WhitePieces, BoardSlots::BlackPieces, E1, CastleSlots::WhiteKingSide, CastleSlots::WhiteQueenSide, is_square_attacked_white);
             }
             Color::Black => {
                 self.generate_pawn_moves(&board_status, SOUTH, RANK7, RANK1, BoardSlots::BlackPawn, Color::White, BoardSlots::BlackQueen, BoardSlots::BlackRook, BoardSlots::BlackBishop, BoardSlots::BlackKnight, BoardSlots::WhitePieces);
-                self.generate_knight_attacks(&board_status, BoardSlots::BlackKnight, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                self.generate_non_sliding_moves(generate_knight_attacks, &board_status, BoardSlots::BlackKnight, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
                 self.generate_slider_moves(generate_bishop_attacks, board_status, BoardSlots::BlackBishop, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
                 self.generate_slider_moves(generate_rook_attakcs,   board_status, BoardSlots::BlackRook,   BoardSlots::BlackPieces, BoardSlots::WhitePieces);
                 self.generate_slider_moves(generate_queen_attacks,  board_status, BoardSlots::BlackQueen,  BoardSlots::BlackPieces, BoardSlots::WhitePieces);
-                generate_king_moves();
+                self.generate_king_moves(board_status, BoardSlots::BlackKing, BoardSlots::BlackPieces, BoardSlots::WhitePieces, E8, CastleSlots::BlackKingSide, CastleSlots::BlackQueenSide, is_square_attacked_black);
             }
         }
         
