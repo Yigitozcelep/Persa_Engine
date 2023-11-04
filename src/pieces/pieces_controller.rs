@@ -5,6 +5,7 @@ use crate::debug::FenString;
 use crate::pieces::tables::*;
 use crate::constants::board_constants::{EMPTY_BITBOARD, RANK1, RANK2, RANK7, RANK8};
 use std::fmt::write;
+use std::fs::copy;
 use std::mem::{transmute, MaybeUninit};
 use std::ops::{Index, IndexMut};
 
@@ -27,6 +28,7 @@ pub enum CastleSlots {
     BlackQueenSide = 0b1000,  // 8
 }
 
+#[derive(Clone, Copy)]
 pub struct Castles(u8);
 
 impl Castles {
@@ -40,6 +42,7 @@ impl Castles {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct BoardStatus {
     boards: [BitBoard; 15], 
     color: Color, 
@@ -79,6 +82,9 @@ impl BoardSlots {
     #[inline(always)]
     pub fn iterate_pieces() -> impl Iterator<Item=BoardSlots> {
         BoardSlots::iterate_board_slots(BoardSlots::WhitePawn, BoardSlots::BlackKing)
+    }
+    pub fn iterate_all_slots() -> impl Iterator<Item=BoardSlots> {
+        BoardSlots::iterate_board_slots(BoardSlots::WhitePawn, BoardSlots::AllPieces)
     }
 }
 
@@ -156,9 +162,15 @@ impl BoardStatus {
         self[BoardSlots::AllPieces].toggle_bit(square)
     }
 
+    pub fn undo_move(&mut self, copy_data: Self) {
+        for slot in BoardSlots::iterate_all_slots() {
+            self[slot] = copy_data[slot]
+        }
+    }
 
     #[inline(always)]
-    pub fn make_move(mut self, mov: MoveBitField) -> Option<Self> {
+    pub fn make_move(&mut self, mov: MoveBitField) -> bool {
+        let copy_data     = *self;
         let source_square = mov.get_source();
         let target_square = mov.get_target();
         let piece         = mov.get_piece();
@@ -221,13 +233,19 @@ impl BoardStatus {
         match self.color {
             Color::Black => {
                 let square = self[BoardSlots::WhiteKing].get_lsb_index();
-                if is_square_attacked_white(&self, square) {return None;}
-                Some(self)
+                if is_square_attacked_white(&self, square) {
+                    *self = copy_data;
+                    return false;
+                }
+                true
             }
             Color::White => {
                 let square = self[BoardSlots::BlackKing].get_lsb_index();
-                if is_square_attacked_black(&self, square) {return None;}
-                Some(self)
+                if is_square_attacked_black(&self, square) {
+                    *self = copy_data;
+                    return false;
+                }
+                true
             }
         }
     }

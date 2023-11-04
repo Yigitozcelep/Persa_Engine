@@ -20,6 +20,6 @@ fn main() {
     
     println!("{}", board);
     println!("{}", move_list);
-    let mut board = board.make_move(move_list[30]).unwrap();
+    let mut board = board.make_move(move_list[30]);
     println!("{}", board);
 }
