@@ -1,12 +1,23 @@
-use crate::board_components::{BitBoard, Color, Square, Direction};
-use crate::constants::directions::{NORTH, SOUTH, WEST, EAST, NORTH_EAST};
+use crate::board_components::{BitBoard, Color, Square, Direction, ChessBoard};
+use crate::constants::directions::{NORTH, SOUTH, WEST, EAST};
 use crate::constants::squares::*;
 use crate::debug::FenString;
 use crate::pieces::tables::*;
 use crate::constants::board_constants::{EMPTY_BITBOARD, RANK1, RANK2, RANK7, RANK8};
+use std::fmt::write;
 use std::mem::{transmute, MaybeUninit};
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
+static CASTLING_RIGHTS: ChessBoard<u8> = ChessBoard::from([
+   13, 15, 15, 15, 12, 15, 15, 14,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+    7, 15, 15, 15,  3, 15,  15, 11
+]);
 
 #[repr(u8)]
 pub enum CastleSlots {
@@ -61,8 +72,13 @@ pub enum BoardSlots {
 }
 impl BoardSlots {
     #[inline(always)]
+    pub fn iterate_board_slots(start: BoardSlots, end: BoardSlots) -> impl Iterator<Item=BoardSlots> {
+        unsafe {(start as usize..=end as usize).map(|num| transmute(num))}
+    }
+
+    #[inline(always)]
     pub fn iterate_pieces() -> impl Iterator<Item=BoardSlots> {
-        unsafe {(BoardSlots::WhitePawn as usize..=BoardSlots::BlackKing as usize).map(|num| transmute(num))}
+        BoardSlots::iterate_board_slots(BoardSlots::WhitePawn, BoardSlots::BlackKing)
     }
 }
 
@@ -70,6 +86,11 @@ impl Index<BoardSlots> for BoardStatus {
     type Output = BitBoard;
     fn index(&self, index: BoardSlots) -> &Self::Output {
         &self.boards[index as usize]
+    }
+}
+impl IndexMut<BoardSlots> for BoardStatus {
+    fn index_mut(&mut self, index: BoardSlots) -> &mut Self::Output {
+        &mut self.boards[index as usize]
     }
 }
 
@@ -126,6 +147,90 @@ impl BoardStatus {
         self.get_pieces_board(piece).set_bit(square);
         self.boards[BoardSlots::AllPieces as usize].set_bit(square);
     }
+
+
+    #[inline(always)]
+    pub fn remove_piece(&mut self, piece: BoardSlots, square: Square) {
+        self[piece].toggle_bit(square);
+        self.get_pieces_board(piece).toggle_bit(square);
+        self[BoardSlots::AllPieces].toggle_bit(square)
+    }
+
+
+    #[inline(always)]
+    pub fn make_move(mut self, mov: MoveBitField) -> Option<Self> {
+        let source_square = mov.get_source();
+        let target_square = mov.get_target();
+        let piece         = mov.get_piece();
+        let promoted      = mov.get_promoted();
+        
+        self.remove_piece(piece, source_square);
+        if MoveBitField::is_move_promoted(promoted) {self.set_piece_bit(promoted, target_square);}
+        else { self.set_piece_bit(piece, target_square); }
+
+        if mov.is_move_enpassant() {
+            match self.color {
+                Color::White => self.remove_piece(BoardSlots::BlackPawn, target_square + SOUTH),
+                Color::Black => self.remove_piece(BoardSlots::WhitePawn, target_square + NORTH),
+            }
+
+            self.enpassant = NO_SQUARE;
+        }
+        else if mov.is_move_capture() {
+            let pieces_iterator = match self.color {
+                Color::White => BoardSlots::iterate_board_slots(BoardSlots::WhitePawn, BoardSlots::WhiteKing),
+                Color::Black => BoardSlots::iterate_board_slots(BoardSlots::BlackPawn, BoardSlots::BlackKing),
+            };
+            for cur_side_piece in pieces_iterator {
+                if !self[cur_side_piece].is_square_set(target_square) {continue;}
+                self.remove_piece(piece, target_square);
+                break;
+            }
+        }
+
+        else if mov.is_move_double() {
+            match self.color {
+                Color::White => self.enpassant = target_square + SOUTH,
+                Color::Black => self.enpassant = target_square + NORTH,
+            }
+        }
+        else if mov.is_move_castling() {
+            match target_square {
+                G1 => { 
+                    self.remove_piece(BoardSlots::WhiteRook, H1);
+                    self.set_piece_bit(BoardSlots::WhiteRook, F1);
+                },
+                C1 => {
+                    self.remove_piece(BoardSlots::WhiteRook, A1);
+                    self.set_piece_bit(BoardSlots::WhiteRook, D1);
+                },
+                G8 => {
+                    self.remove_piece(BoardSlots::BlackRook, H8);
+                    self.set_piece_bit(BoardSlots::BlackRook, F8);
+                },
+                C8 => {
+                    self.remove_piece(BoardSlots::BlackRook, A8);
+                    self.set_piece_bit(BoardSlots::BlackRook, D8);
+                },
+                _  => unreachable!(),
+            }
+        }
+        self.castles.0 &= CASTLING_RIGHTS[source_square];
+        self.castles.0 &= CASTLING_RIGHTS[target_square];
+        self.change_color();
+        match self.color {
+            Color::Black => {
+                let square = self[BoardSlots::WhiteKing].get_lsb_index();
+                if is_square_attacked_white(&self, square) {return None;}
+                Some(self)
+            }
+            Color::White => {
+                let square = self[BoardSlots::BlackKing].get_lsb_index();
+                if is_square_attacked_black(&self, square) {return None;}
+                Some(self)
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for BoardStatus {
@@ -135,7 +240,7 @@ impl std::fmt::Display for BoardStatus {
     }
 }
 
-
+#[derive(Clone, Copy)]
 pub struct MoveBitField(u64);
 impl MoveBitField {
     #[inline(always)]
@@ -186,6 +291,9 @@ impl MoveBitField {
     pub fn get_promoted(&self) -> BoardSlots { unsafe { transmute( (self.0 & 0xf0000) >> 16 ) } }
 
     #[inline(always)]
+    pub fn is_move_promoted(mov: BoardSlots) -> bool {mov != BoardSlots::WhitePawn}
+
+    #[inline(always)]
     pub fn is_move_capture(&self) -> bool { (self.0 & 0x100000) != 0  }
     
     #[inline(always)]
@@ -196,8 +304,29 @@ impl MoveBitField {
 
     #[inline(always)]
     pub fn is_move_castling(&self) -> bool { (self.0 & 0x800000) != 0 }
+
+    pub fn convert_to_string(&self) -> String {
+        let mut result = "".to_string();
+        result += &format!("Piece: {:?} ", self.get_piece()).to_string();
+        result += &format!("Source: {} ", self.get_source()).to_string();
+        result += &format!("Target: {} ", self.get_target()).to_string();
+        if self.get_promoted() != BoardSlots::WhitePawn {result += &format!("Promoted: {:?} ", self.get_promoted()).to_string()};
+        if self.is_move_capture() {result += &format!("Capture ");}
+        if self.is_move_double() {result += &format!("Double ");}
+        if self.is_move_enpassant() {result += &format!("Enpassant ");}
+        if self.is_move_castling() {result += &format!("Castling ")};
+        result
+    }
+    
 }
 
+impl std::fmt::Display for MoveBitField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.convert_to_string())
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct MoveList {
     moves: [MaybeUninit<MoveBitField>; 256],
     pub count: usize,
@@ -208,14 +337,8 @@ impl std::fmt::Display for MoveList {
         
         let mut result = "".to_string();
         for index in 0..self.count {
-            result += &format!("Piece: {:?} ", self[index].get_piece()).to_string();
-            result += &format!("Source: {} ", self[index].get_source()).to_string();
-            result += &format!("Target: {} ", self[index].get_target()).to_string();
-            if self[index].get_promoted() != BoardSlots::WhitePawn {result += &format!("Promoted: {:?} ", self[index].get_promoted()).to_string()};
-            if self[index].is_move_capture() {result += &format!("Capture ");}
-            if self[index].is_move_double() {result += &format!("Double ");}
-            if self[index].is_move_enpassant() {result += &format!("Enpassant ");}
-            if self[index].is_move_castling() {result += &format!("Castling ")};
+            result += &format!("MoveNum: {} ", index);
+            result += &self[index].convert_to_string();
             result += "\n";
         }
         writeln!(f, "{}", result)
@@ -347,9 +470,9 @@ impl MoveList {
             if board_status.can_castle(king_side_castle) && !is_square_attacked(board_status, king_pos + EAST) && !board.is_square_set(king_pos + EAST) && !board.is_square_set(king_pos + EAST * 2) {
                 self.append_move(MoveBitField::new(piece, king_pos, king_pos + EAST * 2).set_castling());
             }
-            if board_status.can_castle(queen_side_castle) && !is_square_attacked(board_status, king_pos + WEST) && !is_square_attacked(board_status, king_pos + WEST * 2) && 
+            if board_status.can_castle(queen_side_castle) && !is_square_attacked(board_status, king_pos + WEST) && 
             !board.is_square_set(king_pos + WEST) && !board.is_square_set(king_pos + WEST * 2) && !board.is_square_set(king_pos + WEST * 3) {
-                self.append_move(MoveBitField::new(piece, king_pos, king_pos + WEST * 3).set_castling())
+                self.append_move(MoveBitField::new(piece, king_pos, king_pos + WEST * 2).set_castling())
             }
         }
 
@@ -386,4 +509,7 @@ impl Index<usize> for MoveList {
     }
     
 }
+
+
+
 

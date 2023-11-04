@@ -68,17 +68,16 @@ impl BitBoard {
         self.0.trailing_zeros()
     }
 
+    pub fn get_lsb_index(&self) -> Square {
+        Square(self.0.trailing_zeros() as u8)
+    }
+
     #[inline(always)]
     pub fn pop_square(&mut self) -> Square {
         debug_assert_ne!(self.0, 0);
-        let result = Square(self.0.trailing_zeros() as u8);
+        let result = self.get_lsb_index();
         self.0 = self.0 & self.0 - 1;
         result
-    }
-    
-    #[inline(always)]
-    pub fn pop_lsb(&mut self) {
-
     }
 
     pub fn get_bitboard_string<T: Display>(data: [T; 64]) -> String {
@@ -127,7 +126,7 @@ impl std::fmt::Display for BitBoard {
 }
 
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Square(pub u8);
 
 impl Square {   

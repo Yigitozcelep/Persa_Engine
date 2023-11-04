@@ -6,17 +6,20 @@ pub mod debug;
 
 
 use debug::FenString;
-use crate::pieces::pieces_controller::{MoveList, CastleSlots};
+
 use crate::pieces::tables::init_statics;
+use crate::pieces::pieces_controller::{BoardSlots, BoardStatus, MoveBitField, MoveList};
 
 fn main() {
     init_statics();
-    
-    let data = FenString::new("r2q1rk1/1b1nbppp/p2ppn2/1pp5/3PPP2/2NBBN2/PPPQ2PP/R4RK1 w - - 0 15".to_string());
-    let board_status = data.convert_to_board();
+    let fen = FenString::new("r3k2r/pb2bppp/1p21n2/3p1B2/3P4/2N2N2/PPPQPPPP/R3K2R w KQkq - 0 1".to_string());
+    let mut board = fen.convert_to_board();
+    board.change_color();
     let mut move_list = MoveList::new();
-    println!("{}", board_status);
-    move_list.generate_moves(&board_status);
+    move_list.generate_moves(&board);
+    
+    println!("{}", board);
     println!("{}", move_list);
-    println!("Total_move: {}", move_list.count)
+    let mut board = board.make_move(move_list[30]).unwrap();
+    println!("{}", board);
 }
