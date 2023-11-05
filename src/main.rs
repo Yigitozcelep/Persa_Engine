@@ -5,12 +5,13 @@ pub mod helper_macros;
 pub mod debug;
 
 
-use debug::{FenString, debug_perft};
+use debug::{FenString, perft_diff_manuel, perft_driver, perft_diff_terminal};
 use crate::pieces::tables::init_statics;
-
-
+use crate::pieces::tables::{genereate_pawn_attacks};
+use crate::pieces::pieces_controller::{MoveList, is_square_attacked_white, BoardSlots};
+use constants::squares::*;
 
 fn main() {
     init_statics();
-    debug_perft();
+    perft_diff_terminal();
 }

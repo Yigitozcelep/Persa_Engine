@@ -201,14 +201,15 @@ fn initialize_pawn_table() {
 
 fn mask_pawn_attacks(side: Color, square: Square) -> BitBoard {
     let mut attack = BitBoard::new();
-    if RANK1.is_square_set(square) || RANK8.is_square_set(square) {return attack;}
-
+    
     match side {
         Color::White => {
+            if RANK8.is_square_set(square)   {return attack;}
             if !A_FILE.is_square_set(square) {attack.set_bit(square + NORTH_WEST);}
             if !H_FILE.is_square_set(square) {attack.set_bit(square + NORTH_EAST);}
         }
         Color::Black => {
+            if RANK1.is_square_set(square)   {return attack;}
             if !A_FILE.is_square_set(square) {attack.set_bit(square + SOUTH_WEST);}
             if !H_FILE.is_square_set(square) {attack.set_bit(square + SOUTH_EAST);}
         }

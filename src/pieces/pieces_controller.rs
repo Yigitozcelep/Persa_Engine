@@ -1,4 +1,5 @@
 use crate::board_components::{BitBoard, Color, Square, Direction, ChessBoard};
+use crate::constants::board_constants::ASCII_PIECES;
 use crate::constants::directions::{NORTH, SOUTH, WEST, EAST};
 use crate::constants::squares::*;
 use crate::debug::FenString;
@@ -6,6 +7,7 @@ use crate::pieces::tables::*;
 use crate::constants::board_constants::{EMPTY_BITBOARD, RANK1, RANK2, RANK7, RANK8};
 use std::mem::{transmute, MaybeUninit};
 use std::ops::{Index, IndexMut};
+
 
 static CASTLING_RIGHTS: ChessBoard<u8> = ChessBoard::from([
    13, 15, 15, 15, 12, 15, 15, 14,
@@ -194,7 +196,8 @@ impl BoardStatus {
             };
             for enemy_piece in enemey_pieces {
                 if !self[enemy_piece].is_square_set(target_square) {continue;}
-                self.remove_piece(enemy_piece, target_square);
+                self[enemy_piece].toggle_bit(target_square);
+                self.get_pieces_board(enemy_piece).toggle_bit(target_square);
                 break;
             }
         }
@@ -324,11 +327,17 @@ impl MoveBitField {
     #[inline(always)]
     pub fn is_move_castling(&self) -> bool { (self.0 & 0x800000) != 0 }
 
+    pub fn get_move_coors(&self) -> String {
+        let mut key = format!("{}{}", self.get_source(), self.get_target()).to_lowercase();
+        let promoted = self.get_promoted();
+        if MoveBitField::is_move_promoted(promoted) { key += ASCII_PIECES[promoted as usize]; }
+        key
+    }
+
     pub fn convert_to_string(&self) -> String {
         let mut result = "".to_string();
-        result += &format!("Piece: {:?} ", self.get_piece()).to_string();
-        result += &format!("Source: {} ", self.get_source()).to_string();
-        result += &format!("Target: {} ", self.get_target()).to_string();
+        result += &self.get_move_coors();
+        result += &format!(" {:?} ", self.get_piece()).to_string();
         if self.get_promoted() != BoardSlots::WhitePawn {result += &format!("Promoted: {:?} ", self.get_promoted()).to_string()};
         if self.is_move_capture() {result += &format!("Capture ");}
         if self.is_move_double() {result += &format!("Double ");}
@@ -336,6 +345,7 @@ impl MoveBitField {
         if self.is_move_castling() {result += &format!("Castling ")};
         result
     }
+
     
 }
 
@@ -356,10 +366,10 @@ impl std::fmt::Display for MoveList {
         
         let mut result = "".to_string();
         for index in 0..self.count {
-            result += &format!("MoveNum: {} ", index);
             result += &self[index].convert_to_string();
             result += "\n";
         }
+        result += &format!("\nTotal Move: {}", self.count);
         writeln!(f, "{}", result)
     }
 }
@@ -377,7 +387,7 @@ pub fn is_square_attacked_black(board_status: &BoardStatus, square: Square) -> b
     knight_attack  & board_status[BoardSlots::WhiteKnight] |
     bishop_attacks & board_status[BoardSlots::WhiteBishop] |
     rook_attacks   & board_status[BoardSlots::WhiteRook]   |
-    queen_attacks  & board_status[BoardSlots::WhiteQueen]   |
+    queen_attacks  & board_status[BoardSlots::WhiteQueen]  |
     king_attack    & board_status[BoardSlots::WhiteKing]) != EMPTY_BITBOARD
 
 }
@@ -392,7 +402,7 @@ pub fn is_square_attacked_white(board_status: &BoardStatus, square: Square) -> b
     knight_attack  & board_status[BoardSlots::BlackKnight] |
     bishop_attacks & board_status[BoardSlots::BlackBishop] |
     rook_attacks   & board_status[BoardSlots::BlackRook]   |
-    queen_attacks  & board_status[BoardSlots::BlackQueen]   |
+    queen_attacks  & board_status[BoardSlots::BlackQueen]  |
     king_attack    & board_status[BoardSlots::BlackKing]) != EMPTY_BITBOARD
 }
 
@@ -433,19 +443,19 @@ impl MoveList {
         
         for square in board_status[pawn].clone() {
             let target = square + mov_dir;
-            if board_status[BoardSlots::AllPieces].is_square_set(target) { continue; }
-            if fnish_line.is_square_set(target) {
-                self.append_move(MoveBitField::new(pawn, square, target).set_promoted(queen));
-                self.append_move(MoveBitField::new(pawn, square, target).set_promoted(rook));
-                self.append_move(MoveBitField::new(pawn, square, target).set_promoted(bishop));
-                self.append_move(MoveBitField::new(pawn, square, target).set_promoted(knight));
+            if !board_status[BoardSlots::AllPieces].is_square_set(target) {
+                if fnish_line.is_square_set(target) {
+                    self.append_move(MoveBitField::new(pawn, square, target).set_promoted(queen));
+                    self.append_move(MoveBitField::new(pawn, square, target).set_promoted(rook));
+                    self.append_move(MoveBitField::new(pawn, square, target).set_promoted(bishop));
+                    self.append_move(MoveBitField::new(pawn, square, target).set_promoted(knight));
+                }
+                else { self.append_move(MoveBitField::new(pawn, square, target) ); }
+                let double_move = target + mov_dir;
+                if double_move_line.is_square_set(square) && !board_status[BoardSlots::AllPieces].is_square_set(double_move) {
+                    self.append_move(MoveBitField::new(pawn, square, double_move).set_double())
+                }
             }
-            else { self.append_move(MoveBitField::new(pawn, square, target) ); }
-            let double_move = target + mov_dir;
-            if double_move_line.is_square_set(square) && !board_status[BoardSlots::AllPieces].is_square_set(double_move) {
-                self.append_move(MoveBitField::new(pawn, square, double_move).set_double())
-            }
-            
             let attacks = genereate_pawn_attacks(square, board_status.color);
             for attack in attacks {
                 if !board_status[enemy_pieces].is_square_set(attack) {continue;}

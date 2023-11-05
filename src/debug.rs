@@ -1,8 +1,8 @@
 use crate::board_components::{BitBoard, Square, Color};
 use crate::constants::directions::SOUTH;
-use crate::constants::squares::NO_SQUARE;
+use crate::constants::squares::{NO_SQUARE, F1};
 use crate::constants::{squares::{A8, H1}, directions::*};
-use crate::pieces::pieces_controller::{BoardStatus, BoardSlots, CastleSlots, Castles, MoveList, MoveBitField};
+use crate::pieces::pieces_controller::{BoardStatus, BoardSlots, CastleSlots, Castles, MoveList, is_square_attacked_white};
 use crate::constants::board_constants::{UNICODE_PIECES, ASCII_PIECES, H_FILE};
 use std::collections::VecDeque;
 use std::collections::HashMap;
@@ -170,25 +170,38 @@ impl std::fmt::Display for FenString {
     }
 }
 
-pub fn debug_perft() {
+pub fn perft_diff_terminal() {
     let args: Vec<String> = env::args().collect();
     let depth: usize = args[1].parse().unwrap();
     let fen: String = args[2].clone();
     let moves: Vec<&str> = args[3].split(" ").collect();
+    perft_diff_manuel(fen, depth, moves, false);
+}
+
+pub fn perft_diff_manuel(fen: String, depth: usize, moves: Vec<&str>, print_moves: bool) {
     let mut board_status = FenString::new(fen).convert_to_board();
+    if print_moves {println!("****************\n******************\nCurrent: {}", board_status)}
     for mov_string in moves {
         let move_list = MoveList::new(&board_status);
+        if print_moves {println!("Moves:\n{}", move_list)};
         for mov in move_list.iterate_moves() {
-            let mut key = format!("{}{}", mov.get_source(), mov.get_target()).to_lowercase();
-            let promoted = mov.get_promoted();
-            if MoveBitField::is_move_promoted(promoted) { key += ASCII_PIECES[promoted as usize]; }
-            if key == mov_string {
+            if mov.get_move_coors() == mov_string {
                 board_status.make_move(mov);
+                if print_moves {println!("Maded Move: {}", mov)};
                 break;
             }
         }
+        if print_moves {println!("After Move: {}", board_status)};
     }
-    
+    if print_moves {println!("\nLast Moves:\n{}", MoveList::new(&board_status))};
+    if print_moves {
+        println!("*************** all bit boards ********************");
+        for piece in BoardSlots::iterate_all_slots() {
+            println!("*********************************************\n");
+            println!("Piece: {:?} Board: {}", piece, board_status[piece]);
+        }
+    }
+    let x = is_square_attacked_white(&board_status, F1);
     perft_driver(&board_status, depth);
 }
 
@@ -199,17 +212,17 @@ pub fn perft_driver(board_status: &BoardStatus, depth: usize) {
     for mov in move_list.iterate_moves() {
         let mut copy_node = *board_status;
         if copy_node.make_move(mov) {
-            let key = format!("{}{}", mov.get_source(), mov.get_target()).to_lowercase();
+            let key = mov.get_move_coors();
             parents.insert(key.clone(), 0);
             dq.push_back((copy_node, key));
         }
-        
     }
     for _ in 0..(depth -1) {
         let len = dq.len();
         for _ in 0..len {
             let node = dq.pop_front().unwrap();
             let move_list = MoveList::new(&node.0);
+
             move_list.iterate_moves().for_each(|mov| {
                 let mut copy_node = node.clone();
                 if copy_node.0.make_move(mov) {
@@ -226,3 +239,5 @@ pub fn perft_driver(board_status: &BoardStatus, depth: usize) {
     }
     println!("\n{}", dq.len());
 }
+
+
