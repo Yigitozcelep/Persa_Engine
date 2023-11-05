@@ -4,8 +4,6 @@ use crate::constants::squares::*;
 use crate::debug::FenString;
 use crate::pieces::tables::*;
 use crate::constants::board_constants::{EMPTY_BITBOARD, RANK1, RANK2, RANK7, RANK8};
-use std::fmt::write;
-use std::fs::copy;
 use std::mem::{transmute, MaybeUninit};
 use std::ops::{Index, IndexMut};
 
@@ -138,7 +136,7 @@ impl BoardStatus {
 
     #[inline(always)]
     pub fn change_color(&mut self) {
-        self.color = unsafe {transmute((self.color as usize + 1) % 2)}
+        self.color = unsafe {transmute(self.color as usize ^ 1)}
     }
 
     #[inline(always)]
@@ -176,26 +174,27 @@ impl BoardStatus {
         let piece         = mov.get_piece();
         let promoted      = mov.get_promoted();
         
-        self.remove_piece(piece, source_square);
-        if MoveBitField::is_move_promoted(promoted) {self.set_piece_bit(promoted, target_square);}
-        else { self.set_piece_bit(piece, target_square); }
+        self.enpassant = NO_SQUARE;
 
+        self.remove_piece(piece, source_square);
+        if MoveBitField::is_move_promoted(promoted) { self.set_piece_bit(promoted, target_square);}
+        else { self.set_piece_bit(piece, target_square); }
+        
         if mov.is_move_enpassant() {
             match self.color {
                 Color::White => self.remove_piece(BoardSlots::BlackPawn, target_square + SOUTH),
                 Color::Black => self.remove_piece(BoardSlots::WhitePawn, target_square + NORTH),
             }
-
-            self.enpassant = NO_SQUARE;
+            
         }
         else if mov.is_move_capture() {
-            let pieces_iterator = match self.color {
-                Color::White => BoardSlots::iterate_board_slots(BoardSlots::WhitePawn, BoardSlots::WhiteKing),
-                Color::Black => BoardSlots::iterate_board_slots(BoardSlots::BlackPawn, BoardSlots::BlackKing),
+            let enemey_pieces = match self.color {
+                Color::White => BoardSlots::iterate_board_slots(BoardSlots::BlackPawn, BoardSlots::BlackKing),
+                Color::Black => BoardSlots::iterate_board_slots(BoardSlots::WhitePawn, BoardSlots::WhiteKing),
             };
-            for cur_side_piece in pieces_iterator {
-                if !self[cur_side_piece].is_square_set(target_square) {continue;}
-                self.remove_piece(piece, target_square);
+            for enemy_piece in enemey_pieces {
+                if !self[enemy_piece].is_square_set(target_square) {continue;}
+                self.remove_piece(enemy_piece, target_square);
                 break;
             }
         }
@@ -230,9 +229,11 @@ impl BoardStatus {
         self.castles.0 &= CASTLING_RIGHTS[source_square];
         self.castles.0 &= CASTLING_RIGHTS[target_square];
         self.change_color();
+        
         match self.color {
             Color::Black => {
                 let square = self[BoardSlots::WhiteKing].get_lsb_index();
+                
                 if is_square_attacked_white(&self, square) {
                     *self = copy_data;
                     return false;
@@ -363,6 +364,8 @@ impl std::fmt::Display for MoveList {
     }
 }
 
+
+
 #[inline(always)]
 pub fn is_square_attacked_black(board_status: &BoardStatus, square: Square) -> bool {
     let knight_attack  = generate_knight_attacks(square);
@@ -374,7 +377,7 @@ pub fn is_square_attacked_black(board_status: &BoardStatus, square: Square) -> b
     knight_attack  & board_status[BoardSlots::WhiteKnight] |
     bishop_attacks & board_status[BoardSlots::WhiteBishop] |
     rook_attacks   & board_status[BoardSlots::WhiteRook]   |
-    queen_attacks  & board_status[BoardSlots::WhiteKing]   |
+    queen_attacks  & board_status[BoardSlots::WhiteQueen]   |
     king_attack    & board_status[BoardSlots::WhiteKing]) != EMPTY_BITBOARD
 
 }
@@ -389,19 +392,33 @@ pub fn is_square_attacked_white(board_status: &BoardStatus, square: Square) -> b
     knight_attack  & board_status[BoardSlots::BlackKnight] |
     bishop_attacks & board_status[BoardSlots::BlackBishop] |
     rook_attacks   & board_status[BoardSlots::BlackRook]   |
-    queen_attacks  & board_status[BoardSlots::BlackKing]   |
+    queen_attacks  & board_status[BoardSlots::BlackQueen]   |
     king_attack    & board_status[BoardSlots::BlackKing]) != EMPTY_BITBOARD
 }
 
 impl MoveList {
     #[inline(always)]
-    pub fn new() -> Self {
-        unsafe {
-            Self {
-                moves: MaybeUninit::uninit().assume_init(), 
-                count: 0,
-             }
+    pub fn new(board_status: &BoardStatus) -> Self {
+        let mut res =  unsafe { Self { moves: MaybeUninit::uninit().assume_init(), count: 0, }};
+        match board_status.color {
+            Color::White => {
+                res.generate_pawn_moves(&board_status, NORTH, RANK2, RANK8, BoardSlots::WhitePawn, Color::Black, BoardSlots::WhiteQueen, BoardSlots::WhiteRook, BoardSlots::WhiteBishop, BoardSlots::WhiteKnight, BoardSlots::BlackPieces);
+                res.generate_non_sliding_moves(generate_knight_attacks, &board_status, BoardSlots::WhiteKnight, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                res.generate_slider_moves(generate_bishop_attacks, board_status, BoardSlots::WhiteBishop, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                res.generate_slider_moves(generate_rook_attakcs,   board_status, BoardSlots::WhiteRook,   BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                res.generate_slider_moves(generate_queen_attacks,  board_status, BoardSlots::WhiteQueen,  BoardSlots::WhitePieces, BoardSlots::BlackPieces);
+                res.generate_king_moves(board_status, BoardSlots::WhiteKing, BoardSlots::WhitePieces, BoardSlots::BlackPieces, E1, CastleSlots::WhiteKingSide, CastleSlots::WhiteQueenSide, is_square_attacked_white);
+            }
+            Color::Black => {
+                res.generate_pawn_moves(&board_status, SOUTH, RANK7, RANK1, BoardSlots::BlackPawn, Color::White, BoardSlots::BlackQueen, BoardSlots::BlackRook, BoardSlots::BlackBishop, BoardSlots::BlackKnight, BoardSlots::WhitePieces);
+                res.generate_non_sliding_moves(generate_knight_attacks, &board_status, BoardSlots::BlackKnight, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                res.generate_slider_moves(generate_bishop_attacks, board_status, BoardSlots::BlackBishop, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                res.generate_slider_moves(generate_rook_attakcs,   board_status, BoardSlots::BlackRook,   BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                res.generate_slider_moves(generate_queen_attacks,  board_status, BoardSlots::BlackQueen,  BoardSlots::BlackPieces, BoardSlots::WhitePieces);
+                res.generate_king_moves(board_status, BoardSlots::BlackKing, BoardSlots::BlackPieces, BoardSlots::WhitePieces, E8, CastleSlots::BlackKingSide, CastleSlots::BlackQueenSide, is_square_attacked_black);
+            }
         }
+        res
     }
     #[inline(always)]
     pub fn append_move(&mut self, mov: MoveBitField) {
@@ -442,6 +459,7 @@ impl MoveList {
             }
         }
         if board_status.enpassant != NO_SQUARE {
+            if board_status[pawn].is_square_set(board_status.enpassant + mov_dir) {return;}
             for square in genereate_pawn_attacks(board_status.enpassant, enemy_color) {
                 if board_status[pawn].is_square_set(square) {
                     self.append_move(MoveBitField::new(pawn, square, board_status.enpassant).set_enpassant().set_capture())
@@ -483,7 +501,7 @@ impl MoveList {
     king_pos: Square, king_side_castle: CastleSlots, queen_side_castle: CastleSlots, is_square_attacked: fn(&BoardStatus, Square) -> bool) {
         
         self.generate_non_sliding_moves(generate_king_attacks, board_status, piece, my_pieces, enemy_pieces);
-        let board = board_status[my_pieces];
+        let board = board_status[BoardSlots::AllPieces];
         if !is_square_attacked(board_status, king_pos) {
             if board_status.can_castle(king_side_castle) && !is_square_attacked(board_status, king_pos + EAST) && !board.is_square_set(king_pos + EAST) && !board.is_square_set(king_pos + EAST * 2) {
                 self.append_move(MoveBitField::new(piece, king_pos, king_pos + EAST * 2).set_castling());
@@ -496,28 +514,10 @@ impl MoveList {
 
     }
 
-    pub fn generate_moves(&mut self, board_status: &BoardStatus) {
-        match board_status.color {
-            Color::White => {
-                self.generate_pawn_moves(&board_status, NORTH, RANK2, RANK8, BoardSlots::WhitePawn, Color::Black, BoardSlots::WhiteQueen, BoardSlots::WhiteRook, BoardSlots::WhiteBishop, BoardSlots::WhiteKnight, BoardSlots::BlackPieces);
-                self.generate_non_sliding_moves(generate_knight_attacks, &board_status, BoardSlots::WhiteKnight, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
-                self.generate_slider_moves(generate_bishop_attacks, board_status, BoardSlots::WhiteBishop, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
-                self.generate_slider_moves(generate_rook_attakcs,   board_status, BoardSlots::WhiteRook,   BoardSlots::WhitePieces, BoardSlots::BlackPieces);
-                self.generate_slider_moves(generate_queen_attacks,  board_status, BoardSlots::WhiteQueen,  BoardSlots::WhitePieces, BoardSlots::BlackPieces);
-                self.generate_king_moves(board_status, BoardSlots::WhiteKing, BoardSlots::WhitePieces, BoardSlots::BlackPieces, E1, CastleSlots::WhiteKingSide, CastleSlots::WhiteQueenSide, is_square_attacked_white);
-            }
-            Color::Black => {
-                self.generate_pawn_moves(&board_status, SOUTH, RANK7, RANK1, BoardSlots::BlackPawn, Color::White, BoardSlots::BlackQueen, BoardSlots::BlackRook, BoardSlots::BlackBishop, BoardSlots::BlackKnight, BoardSlots::WhitePieces);
-                self.generate_non_sliding_moves(generate_knight_attacks, &board_status, BoardSlots::BlackKnight, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
-                self.generate_slider_moves(generate_bishop_attacks, board_status, BoardSlots::BlackBishop, BoardSlots::BlackPieces, BoardSlots::WhitePieces);
-                self.generate_slider_moves(generate_rook_attakcs,   board_status, BoardSlots::BlackRook,   BoardSlots::BlackPieces, BoardSlots::WhitePieces);
-                self.generate_slider_moves(generate_queen_attacks,  board_status, BoardSlots::BlackQueen,  BoardSlots::BlackPieces, BoardSlots::WhitePieces);
-                self.generate_king_moves(board_status, BoardSlots::BlackKing, BoardSlots::BlackPieces, BoardSlots::WhitePieces, E8, CastleSlots::BlackKingSide, CastleSlots::BlackQueenSide, is_square_attacked_black);
-            }
-        }
-        
+    pub fn iterate_moves<'a>(&'a self) -> impl Iterator<Item = MoveBitField> + 'a {
+        (0..self.count).map(|i| self[i])
     }
-    
+
 }
 
 impl Index<usize> for MoveList {

@@ -2,9 +2,11 @@ use crate::board_components::{BitBoard, Square, Color};
 use crate::constants::directions::SOUTH;
 use crate::constants::squares::NO_SQUARE;
 use crate::constants::{squares::{A8, H1}, directions::*};
-use crate::pieces::pieces_controller::{BoardStatus, BoardSlots, CastleSlots, Castles};
+use crate::pieces::pieces_controller::{BoardStatus, BoardSlots, CastleSlots, Castles, MoveList, MoveBitField};
 use crate::constants::board_constants::{UNICODE_PIECES, ASCII_PIECES, H_FILE};
-
+use std::collections::VecDeque;
+use std::collections::HashMap;
+use std::env;
 
 pub fn str_to_piece(asci_piece: &str) -> BoardSlots {
     match asci_piece {
@@ -102,6 +104,10 @@ impl FenString {
         Self { board, color, castles, enpassant, half_move, full_move}
     }
 
+    pub fn get_fen_string(&self) -> String {
+        format!("{} {} {} {} {} {}", self.board, self.color, self.castles, self.enpassant, self.half_move, self.full_move)
+    }
+
     pub fn convert_to_board(&self) -> BoardStatus {
         let mut enpassant_square = NO_SQUARE;
         if self.enpassant != "-" {
@@ -115,7 +121,7 @@ impl FenString {
         let mut square = A8 + WEST; // undefined square but it helps to create array
         for c in self.board.chars() {
             if c.is_numeric() {square = square + (EAST * c.to_digit(10).unwrap() as u8)}
-            else if c == '/' {square = (square + WEST * 8) + SOUTH; print!("\n");}
+            else if c == '/' {square = (square + WEST * 8) + SOUTH;}
             else {
                 let piece = str_to_piece(c.to_string().as_str());
                 square = square + EAST;
@@ -153,7 +159,7 @@ impl FenString {
             res = res.replace(s, &unicode.to_string());
         }
         res = res.chars().enumerate().map(|data| if data.0 != 459 {data.1} else {'B'}).collect();
-        res = format!("\n----------------------------------------------------------------\nColor: {}, Castles: {}, Enpassant: {}, Half_move: {} Full_move: {}\n{}", self.color, self.castles, self.enpassant, self.half_move, self.full_move, res);
+        res = format!("\n----------------------------------------------------------------\nColor: {}, Castles: {}, Enpassant: {}, Half_move: {} Full_move: {}\n{}\n{}", self.color, self.castles, self.enpassant, self.half_move, self.full_move, self.get_fen_string(), res);
         res
     }
 }
@@ -162,4 +168,61 @@ impl std::fmt::Display for FenString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.adjust_board_display())
     }
+}
+
+pub fn debug_perft() {
+    let args: Vec<String> = env::args().collect();
+    let depth: usize = args[1].parse().unwrap();
+    let fen: String = args[2].clone();
+    let moves: Vec<&str> = args[3].split(" ").collect();
+    let mut board_status = FenString::new(fen).convert_to_board();
+    for mov_string in moves {
+        let move_list = MoveList::new(&board_status);
+        for mov in move_list.iterate_moves() {
+            let mut key = format!("{}{}", mov.get_source(), mov.get_target()).to_lowercase();
+            let promoted = mov.get_promoted();
+            if MoveBitField::is_move_promoted(promoted) { key += ASCII_PIECES[promoted as usize]; }
+            if key == mov_string {
+                board_status.make_move(mov);
+                break;
+            }
+        }
+    }
+    
+    perft_driver(&board_status, depth);
+}
+
+pub fn perft_driver(board_status: &BoardStatus, depth: usize) {
+    let mut dq: VecDeque<(BoardStatus, String)> = VecDeque::new();
+    let mut parents: HashMap<String, usize> = HashMap::new();
+    let move_list = MoveList::new(board_status);
+    for mov in move_list.iterate_moves() {
+        let mut copy_node = *board_status;
+        if copy_node.make_move(mov) {
+            let key = format!("{}{}", mov.get_source(), mov.get_target()).to_lowercase();
+            parents.insert(key.clone(), 0);
+            dq.push_back((copy_node, key));
+        }
+        
+    }
+    for _ in 0..(depth -1) {
+        let len = dq.len();
+        for _ in 0..len {
+            let node = dq.pop_front().unwrap();
+            let move_list = MoveList::new(&node.0);
+            move_list.iterate_moves().for_each(|mov| {
+                let mut copy_node = node.clone();
+                if copy_node.0.make_move(mov) {
+                    dq.push_back(copy_node);
+                }
+            });
+        }
+    }
+    for el in &dq {
+        *parents.get_mut(&el.1).unwrap() += 1;
+    }
+    for el in parents {
+        println!("{} {}", el.0, el.1)
+    }
+    println!("\n{}", dq.len());
 }
