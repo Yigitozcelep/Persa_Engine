@@ -1,8 +1,7 @@
 use crate::board_components::{BitBoard, Square, Color};
 use crate::constants::directions::SOUTH;
-use crate::constants::squares::{NO_SQUARE, F1};
-use crate::constants::{squares::{A8, H1}, directions::*};
-use crate::pieces::pieces_controller::{BoardStatus, BoardSlots, CastleSlots, Castles, MoveList, is_square_attacked_white};
+use crate::constants::{squares::{A8, H1, NO_SQUARE}, directions::*};
+use crate::pieces::pieces_controller::{BoardStatus, BoardSlots, CastleSlots, Castles, MoveList};
 use crate::constants::board_constants::{UNICODE_PIECES, ASCII_PIECES, H_FILE};
 use std::collections::VecDeque;
 use std::collections::HashMap;
@@ -171,6 +170,11 @@ impl std::fmt::Display for FenString {
 }
 
 pub fn perft_diff_terminal() {
+    // example usage !!! DO NOT FORGET writing "" in fen string
+    // ./perft_diff.sh 4 "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1" 
+    // it means depth 4, fen = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1",
+    // also you can use optional moves for example
+    // ./perft_diff.sh 4 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" a2a3 a7a6
     let args: Vec<String> = env::args().collect();
     let depth: usize = args[1].parse().unwrap();
     let fen: String = args[2].clone();
@@ -201,7 +205,6 @@ pub fn perft_diff_manuel(fen: String, depth: usize, moves: Vec<&str>, print_move
             println!("Piece: {:?} Board: {}", piece, board_status[piece]);
         }
     }
-    let x = is_square_attacked_white(&board_status, F1);
     perft_driver(&board_status, depth);
 }
 

@@ -177,7 +177,7 @@ impl BoardStatus {
         let promoted      = mov.get_promoted();
         
         self.enpassant = NO_SQUARE;
-
+        
         self.remove_piece(piece, source_square);
         if MoveBitField::is_move_promoted(promoted) { self.set_piece_bit(promoted, target_square);}
         else { self.set_piece_bit(piece, target_square); }
@@ -328,10 +328,10 @@ impl MoveBitField {
     pub fn is_move_castling(&self) -> bool { (self.0 & 0x800000) != 0 }
 
     pub fn get_move_coors(&self) -> String {
-        let mut key = format!("{}{}", self.get_source(), self.get_target()).to_lowercase();
+        let mut key = format!("{}{}", self.get_source(), self.get_target());
         let promoted = self.get_promoted();
         if MoveBitField::is_move_promoted(promoted) { key += ASCII_PIECES[promoted as usize]; }
-        key
+        key.to_lowercase()
     }
 
     pub fn convert_to_string(&self) -> String {
