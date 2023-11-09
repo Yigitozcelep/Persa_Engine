@@ -189,7 +189,7 @@ pub fn perft_diff_manuel(fen: String, depth: usize, moves: Vec<&str>, print_move
         let move_list = MoveList::new(&board_status);
         if print_moves {println!("Moves:\n{}", move_list)};
         for mov in move_list.iterate_moves() {
-            if mov.get_move_coors() == mov_string {
+            if mov.get_move_name() == mov_string {
                 board_status.make_move(mov);
                 if print_moves {println!("Maded Move: {}", mov)};
                 break;
@@ -215,7 +215,7 @@ pub fn perft_driver(board_status: &BoardStatus, depth: usize) {
     for mov in move_list.iterate_moves() {
         let mut copy_node = *board_status;
         if copy_node.make_move(mov) {
-            let key = mov.get_move_coors();
+            let key = mov.get_move_name();
             parents.insert(key.clone(), 0);
             dq.push_back((copy_node, key));
         }

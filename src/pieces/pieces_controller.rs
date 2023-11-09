@@ -8,7 +8,6 @@ use crate::constants::board_constants::{EMPTY_BITBOARD, RANK1, RANK2, RANK7, RAN
 use std::mem::{transmute, MaybeUninit};
 use std::ops::{Index, IndexMut};
 
-
 static CASTLING_RIGHTS: ChessBoard<u8> = ChessBoard::from([
    13, 15, 15, 15, 12, 15, 15, 14,
    15, 15, 15, 15, 15, 15, 15, 15,
@@ -327,7 +326,7 @@ impl MoveBitField {
     #[inline(always)]
     pub fn is_move_castling(&self) -> bool { (self.0 & 0x800000) != 0 }
 
-    pub fn get_move_coors(&self) -> String {
+    pub fn get_move_name(&self) -> String {
         let mut key = format!("{}{}", self.get_source(), self.get_target());
         let promoted = self.get_promoted();
         if MoveBitField::is_move_promoted(promoted) { key += ASCII_PIECES[promoted as usize]; }
@@ -336,7 +335,7 @@ impl MoveBitField {
 
     pub fn convert_to_string(&self) -> String {
         let mut result = "".to_string();
-        result += &self.get_move_coors();
+        result += &self.get_move_name();
         result += &format!(" {:?} ", self.get_piece()).to_string();
         if self.get_promoted() != BoardSlots::WhitePawn {result += &format!("Promoted: {:?} ", self.get_promoted()).to_string()};
         if self.is_move_capture() {result += &format!("Capture ");}
