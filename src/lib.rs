@@ -20,7 +20,6 @@ pub fn get_moves(fen: String) -> Vec<String> {
 }
 
 pub fn make_move(fen: String, move_name: String) -> String {
-    println!("{}", move_name);
     let mut board = FenString::new(fen).convert_to_board();
     let moves = MoveList::new(&board);
     let mov = moves.iterate_moves().find(|mov| mov.get_move_name() == move_name).unwrap();

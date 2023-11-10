@@ -139,7 +139,7 @@ impl BoardStatus {
     pub fn change_color(&mut self) {
         self.color = unsafe {transmute(self.color as usize ^ 1)}
     }
-
+    
     #[inline(always)]
     pub fn get_pieces_board(&mut self, piece: BoardSlots) -> &mut BitBoard {
         let i = (piece as usize) / 6;

@@ -37,7 +37,7 @@ pub struct FenString {
 
 impl FenString {
     pub fn new(fen: String) -> Self { 
-        let data: Vec<&str> = fen.split(" ").collect();
+        let data: Vec<&str> = fen.trim().split(" ").collect();
         Self {
             board: data[0].to_string(),
             color: data[1].to_string(),
@@ -208,7 +208,7 @@ pub fn perft_diff_manuel(fen: String, depth: usize, moves: Vec<&str>, print_move
     perft_driver(&board_status, depth);
 }
 
-pub fn perft_driver(board_status: &BoardStatus, depth: usize) {
+pub fn perft_driver(board_status: &BoardStatus, depth: usize) -> usize {
     let mut dq: VecDeque<(BoardStatus, String)> = VecDeque::new();
     let mut parents: HashMap<String, usize> = HashMap::new();
     let move_list = MoveList::new(board_status);
@@ -241,6 +241,7 @@ pub fn perft_driver(board_status: &BoardStatus, depth: usize) {
         println!("{} {}", el.0, el.1)
     }
     println!("\n{}", dq.len());
+    dq.len()
 }
 
 
