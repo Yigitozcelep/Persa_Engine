@@ -26,7 +26,7 @@ pub fn make_move(fen: String, move_name: String) -> String {
     let moves = MoveList::new(&board);
     let mov = moves.iterate_moves().find(|mov| mov.get_move_name() == move_name).unwrap();
     board.make_move(mov);
-    let (mov, score) = minimax(board, 5);
+    let (mov, score) = minimax(board, 4);
     println!("{} {}", mov, score);
     board.make_move(mov);
     FenString::from_board(&board).get_fen_string()

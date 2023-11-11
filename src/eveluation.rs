@@ -1,6 +1,7 @@
 use crate::pieces::pieces_controller::{BoardSlots, BoardStatus, MoveList, MoveBitField};
 use crate::board_components::Color;
 use crate::constants::eveluation_constants::MATERIAL_SCORES;
+use crate::pieces::pieces_controller::{is_square_attacked_black, is_square_attacked_white};
 
 pub fn eveluate(board_status: &BoardStatus) -> isize {
     let mut score: isize = 0;
@@ -22,43 +23,56 @@ pub fn eveluate(board_status: &BoardStatus) -> isize {
     score                                                                                                   
 }
 
-fn mini(board_status: BoardStatus, depth: usize, alpha: isize, mut beta: isize) -> isize {
+fn mini(board_status: BoardStatus, depth: isize, alpha: isize, mut beta: isize) -> isize {
     if depth == 0 {return eveluate(&board_status);}
     let move_list = MoveList::new(&board_status);
-    let mut min_val = isize::MAX;
+    let mut min_val = i16::MAX as isize;
+    let mut move_count = 0;
     for mov in move_list.iterate_moves() {
         let mut board = board_status;
         if !board.make_move(mov) {continue;}
+        move_count += 1;
         let val = maxi(board, depth - 1, alpha, beta);
         min_val = isize::min(min_val, val);
         beta = isize::min(beta, min_val);
         if beta <= alpha {break;}
     }
+    
+    if move_count == 0 {
+        if is_square_attacked_black(&board_status, board_status[BoardSlots::BlackKing].get_lsb_index()) {return min_val + depth;}
+        return 0;
+    }
     min_val
 }
 
-fn maxi(board_status: BoardStatus, depth: usize, mut alpha: isize, beta: isize) -> isize {
+fn maxi(board_status: BoardStatus, depth: isize, mut alpha: isize, beta: isize) -> isize {
     if depth == 0 {return eveluate(&board_status);}
     let move_list = MoveList::new(&board_status);
-    let mut max_val = isize::MIN;
+    let mut max_val = i16::MIN as isize;
+    let mut move_count = 0;
     for mov in move_list.iterate_moves() {
         let mut board = board_status;
         if !board.make_move(mov) {continue;}
+        move_count += 1;
         let val = mini(board, depth - 1, alpha, beta);
         max_val = isize::max(max_val, val);
         alpha = isize::max(alpha, max_val);
         if beta <= alpha {break;}
     }
+    if move_count == 0 {
+        if is_square_attacked_white(&board_status, board_status[BoardSlots::WhiteKing].get_lsb_index()) {return max_val - depth;}
+        return 0;
+    }
     max_val
 }
 
-fn get_white_best(board_status: BoardStatus, depth: usize) -> (MoveBitField, isize) {
+fn get_white_best(board_status: BoardStatus, depth: isize) -> (MoveBitField, isize) {
     debug_assert_ne!(0, depth);
     let move_list = MoveList::new(&board_status);
     let mut alpha = isize::MIN;
     let beta  = isize::MAX;
-    let mut max_val = isize::MIN;
-    let mut best_move = move_list[0];
+    let mut max_val = i16::MIN as isize;
+    let mut best_move = MoveBitField::NO_MOVE;
     for mov in move_list.iterate_moves() {
         let mut board = board_status;
         if !board.make_move(mov) {continue;}
@@ -72,13 +86,13 @@ fn get_white_best(board_status: BoardStatus, depth: usize) -> (MoveBitField, isi
     (best_move, max_val)
 }
 
-fn get_black_best(board_status: BoardStatus, depth: usize) -> (MoveBitField, isize){
+fn get_black_best(board_status: BoardStatus, depth: isize) -> (MoveBitField, isize){
     debug_assert_ne!(0, depth);
     let move_list = MoveList::new(&board_status);
     let alpha = isize::MIN;
     let mut beta  = isize::MAX;
-    let mut min_val = isize::MAX;
-    let mut best_move = move_list[0];
+    let mut min_val = i16::MAX as isize;
+    let mut best_move = MoveBitField::NO_MOVE;
     for mov in move_list.iterate_moves() {
         let mut board = board_status;
         if !board.make_move(mov) {continue;}
@@ -92,7 +106,7 @@ fn get_black_best(board_status: BoardStatus, depth: usize) -> (MoveBitField, isi
     (best_move, min_val)
 }
 
-pub fn minimax(board_status: BoardStatus, depth: usize) -> (MoveBitField, isize) {
+pub fn minimax(board_status: BoardStatus, depth: isize) -> (MoveBitField, isize) {
     match board_status.get_color() {
         Color::White => get_white_best(board_status, depth),
         Color::Black => get_black_best(board_status, depth),

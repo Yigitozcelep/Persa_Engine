@@ -264,6 +264,8 @@ impl std::fmt::Display for BoardStatus {
 #[derive(Clone, Copy)]
 pub struct MoveBitField(u64);
 impl MoveBitField {
+    pub const NO_MOVE: MoveBitField = MoveBitField(0);
+
     #[inline(always)]
     pub fn new(piece: BoardSlots, source: Square, target: Square) -> Self { 
         Self((source.0 as u64) | (target.0 as u64) << 6 | (piece as u64) << 12) 
