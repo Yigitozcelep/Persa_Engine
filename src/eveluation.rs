@@ -26,7 +26,7 @@ pub fn eveluate(board_status: &BoardStatus) -> isize {
 fn mini(board_status: BoardStatus, depth: isize, alpha: isize, mut beta: isize) -> isize {
     if depth == 0 {return eveluate(&board_status);}
     let move_list = MoveList::new(&board_status);
-    let mut min_val = i16::MAX as isize;
+    let mut min_val = isize::MAX as isize;
     let mut move_count = 0;
     for mov in move_list.iterate_moves() {
         let mut board = board_status;
@@ -39,7 +39,7 @@ fn mini(board_status: BoardStatus, depth: isize, alpha: isize, mut beta: isize) 
     }
     
     if move_count == 0 {
-        if is_square_attacked_black(&board_status, board_status[BoardSlots::BlackKing].get_lsb_index()) {return min_val + depth;}
+        if is_square_attacked_black(&board_status, board_status[BoardSlots::BlackKing].get_lsb_index()) {return 5000 + depth;}
         return 0;
     }
     min_val
@@ -48,19 +48,20 @@ fn mini(board_status: BoardStatus, depth: isize, alpha: isize, mut beta: isize) 
 fn maxi(board_status: BoardStatus, depth: isize, mut alpha: isize, beta: isize) -> isize {
     if depth == 0 {return eveluate(&board_status);}
     let move_list = MoveList::new(&board_status);
-    let mut max_val = i16::MIN as isize;
+    let mut max_val = isize::MIN as isize;
     let mut move_count = 0;
     for mov in move_list.iterate_moves() {
         let mut board = board_status;
         if !board.make_move(mov) {continue;}
         move_count += 1;
         let val = mini(board, depth - 1, alpha, beta);
+        if val == isize::MIN as isize {println!("{} {}", board_status, mov)}
         max_val = isize::max(max_val, val);
         alpha = isize::max(alpha, max_val);
         if beta <= alpha {break;}
     }
     if move_count == 0 {
-        if is_square_attacked_white(&board_status, board_status[BoardSlots::WhiteKing].get_lsb_index()) {return max_val - depth;}
+        if is_square_attacked_white(&board_status, board_status[BoardSlots::WhiteKing].get_lsb_index()) {return -5000 - depth;}
         return 0;
     }
     max_val
@@ -71,7 +72,7 @@ fn get_white_best(board_status: BoardStatus, depth: isize) -> (MoveBitField, isi
     let move_list = MoveList::new(&board_status);
     let mut alpha = isize::MIN;
     let beta  = isize::MAX;
-    let mut max_val = i16::MIN as isize;
+    let mut max_val = isize::MIN as isize;
     let mut best_move = MoveBitField::NO_MOVE;
     for mov in move_list.iterate_moves() {
         let mut board = board_status;
@@ -91,7 +92,7 @@ fn get_black_best(board_status: BoardStatus, depth: isize) -> (MoveBitField, isi
     let move_list = MoveList::new(&board_status);
     let alpha = isize::MIN;
     let mut beta  = isize::MAX;
-    let mut min_val = i16::MAX as isize;
+    let mut min_val = isize::MAX as isize;
     let mut best_move = MoveBitField::NO_MOVE;
     for mov in move_list.iterate_moves() {
         let mut board = board_status;
