@@ -134,7 +134,7 @@ impl FenString {
         if !self.castles.contains("q") {board.remove_castle(CastleSlots::BlackQueenSide);}
         board
     }
-
+    
     pub fn adjust_board_display(&self) -> String {
         let mut data = ['.'; 64];
         let mut square = 56; // A8

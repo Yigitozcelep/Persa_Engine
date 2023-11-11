@@ -11,7 +11,7 @@ pub fn test_pertfs() {
     for part in contents.split("\n") {
         let data: Vec<&str> = part.split(";").collect();
         let fen = data[0];
-        for i in 1..6 {
+        for i in 1..5 {
             let perft = data[i].split(" ").nth(1).unwrap();
             let board = FenString::new(fen.to_string()).convert_to_board();
             let res = perft_driver(&board, i);

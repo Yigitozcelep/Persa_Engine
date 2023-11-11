@@ -193,24 +193,37 @@ pub mod board_constants {
 pub mod eveluation_constants {
     use crate::board_components::ChessBoard;
 
-
+    
     pub struct MaterialScores {
-       pub white_pawn_score:   ChessBoard<isize>,
-       pub white_knight_score: ChessBoard<isize>,
-       pub white_bishop_score: ChessBoard<isize>,
-       pub white_rook_score:   ChessBoard<isize>,
-       pub white_king_score:   ChessBoard<isize>,
+        pub pawn_score:   isize,
+        pub king_score:   isize,
+        pub rook_score:   isize,
+        pub queen_score:  isize,
+        pub bishop_score: isize,
+        pub knight_score: isize,
+        pub white_pawn_square_score:   ChessBoard<isize>,
+        pub white_knight_square_score: ChessBoard<isize>,
+        pub white_bishop_square_score: ChessBoard<isize>,
+        pub white_rook_square_score:   ChessBoard<isize>,
+        pub white_king_square_score:   ChessBoard<isize>,
 
-       pub black_pawn_score:   ChessBoard<isize>,
-       pub black_knight_score: ChessBoard<isize>,
-       pub black_bishop_score: ChessBoard<isize>,
-       pub black_rook_score:   ChessBoard<isize>,
-       pub black_king_score:   ChessBoard<isize>,
+        pub black_pawn_square_score:   ChessBoard<isize>,
+        pub black_knight_square_score: ChessBoard<isize>,
+        pub black_bishop_square_score: ChessBoard<isize>,
+        pub black_rook_square_score:   ChessBoard<isize>,
+        pub black_king_square_score:   ChessBoard<isize>,
     }
     impl MaterialScores {
         pub const fn new() -> Self {
             Self { 
-                white_pawn_score: ChessBoard([
+                pawn_score: 100,
+                king_score: 10000,
+                rook_score: 500,
+                queen_score: 900,
+                knight_score: 300,
+                bishop_score: 320,
+                
+                white_pawn_square_score: ChessBoard([
                     0,   0,   0,   0,   0,   0,   0,   0,
                     0,   0,   0, -10, -10,   0,   0,   0,
                     0,   0,   0,   5,   5,   0,   0,   0,
@@ -221,7 +234,7 @@ pub mod eveluation_constants {
                     90,  90,  90,  90,  90,  90,  90,  90,
                 ]), 
 
-                white_knight_score: ChessBoard([
+                white_knight_square_score: ChessBoard([
                     -5, -10,   0,   0,   0,   0, -10,  -5,
                     -5,   0,   0,   0,   0,   0,   0,  -5,
                     -5,   5,  20,  10,  10,  20,   5,  -5,
@@ -232,7 +245,7 @@ pub mod eveluation_constants {
                     -5,   0,   0,   0,   0,   0,   0,  -5,
                 ]),
 
-                white_bishop_score: ChessBoard([
+                white_bishop_square_score: ChessBoard([
                     0,   0, -10,   0,   0, -10,   0,   0,
                     0,  30,   0,   0,   0,   0,  30,   0,
                     0,  10,   0,   0,   0,   0,  10,   0,
@@ -243,7 +256,7 @@ pub mod eveluation_constants {
                     0,   0,   0,   0,   0,   0,   0,   0,
                 ]),
 
-                white_rook_score: ChessBoard([
+                white_rook_square_score: ChessBoard([
                      0,   0,   0,  20,  20,   0,   0,   0,
                      0,   0,  10,  20,  20,  10,   0,   0,
                      0,   0,  10,  20,  20,  10,   0,   0,
@@ -254,7 +267,7 @@ pub mod eveluation_constants {
                     50,  50,  50,  50,  50,  50,  50,  50,
                 ]),  
                 
-                white_king_score: ChessBoard([
+                white_king_square_score: ChessBoard([
                     0,   0,   5,   0, -15,   0,  10,   0,
                     0,   5,   5,  -5,  -5,   0,   5,   0,
                     0,   0,   5,  10,  10,   5,   0,   0,
@@ -265,55 +278,55 @@ pub mod eveluation_constants {
                     0,   0,   0,   0,   0,   0,   0,   0,
                 ]),
 
-                black_pawn_score: ChessBoard([
-                    90,  90,  90,  90,  90,  90,  90,  90,
-                    30,  30,  30,  40,  40,  30,  30,  30,
-                    20,  20,  20,  30,  30,  30,  20,  20,
-                    10,  10,  10,  20,  20,  10,  10,  10,
-                     5,   5,  10,  20,  20,   5,   5,   5,
-                     0,   0,   0,   5,   5,   0,   0,   0,
-                     0,   0,   0, -10, -10,   0,   0,   0,
-                     0,   0,   0,   0,   0,   0,   0,   0]), 
+                black_pawn_square_score: ChessBoard([
+                    -90,  -90,  -90,  -90,  -90,  -90,  -90,  -90,
+                    -30,  -30,  -30,  -40,  -40,  -30,  -30,  -30,
+                    -20,  -20,  -20,  -30,  -30,  -30,  -20,  -20,
+                    -10,  -10,  -10,  -20,  -20,  -10,  -10,  -10,
+                    -5,   -5,  -10,   -20,  -20,   -5,   -5,   -5,
+                     0,   0,    0,    -5,   -5,     0,    0,    0,
+                     0,   0,    0,    10,   10,     0,    0,    0,
+                     0,   0,    0,     0,     0,    0,    0,    0]), 
 
-                black_knight_score: ChessBoard([
-                    -5,   0,   0,   0,   0,   0,   0,  -5,
-                    -5,   0,   0,  10,  10,   0,   0,  -5,
-                    -5,   5,  20,  20,  20,  20,   5,  -5,
-                    -5,  10,  20,  30,  30,  20,  10,  -5,
-                    -5,  10,  20,  30,  30,  20,  10,  -5,
-                    -5,   5,  20,  10,  10,  20,   5,  -5,
-                    -5,   0,   0,   0,   0,   0,   0,  -5,
-                    -5, -10,   0,   0,   0,   0, -10,  -5
+                black_knight_square_score: ChessBoard([
+                    5,   0,   0,     0,    0,   0,   0,  5,
+                    5,   0,   0,    -10,  -10,  0,   0,  5,
+                    5,   -5,  -20,  -20,  -20, -20, -5,  5,
+                    5,   -10, -20,  -30,  -30, -20, -10, 5,
+                    5,   -10, -20,  -30,  -30, -20, -10, 5,
+                    5,   -5,  -20,  -10,  -10, -20, -5,  5,
+                    5,    0,   0,    0,    0,   0,   0,  5,
+                    5,   10,   0,    0,    0,   0,   10, 5
                 ]), 
-                black_bishop_score: ChessBoard([
+                black_bishop_square_score: ChessBoard([
                     0,   0,   0,   0,   0,   0,   0,   0,
                     0,   0,   0,   0,   0,   0,   0,   0,
-                    0,   0,   0,  10,  10,   0,   0,   0,
-                    0,   0,  10,  20,  20,  10,   0,   0,
-                    0,   0,  10,  20,  20,  10,   0,   0,
-                    0,  10,   0,   0,   0,   0,  10,   0,
-                    0,  30,   0,   0,   0,   0,  30,   0,
-                    0,   0, -10,   0,   0, -10,   0,   0
+                    0,   0,   0,  -10, -10,  0,   0,   0,
+                    0,   0,  -10, -20, -20, -10,  0,   0,
+                    0,   0,  -10, -20, -20, -10,  0,   0,
+                    0,  -10,  0,   0,   0,   0,  -10,  0,
+                    0,  -30,  0,   0,   0,   0,  -30,  0,
+                    0,   0,   10,  0,   0,   10,  0,   0
                 ]), 
-                black_rook_score: ChessBoard([
-                    50,  50,  50,  50,  50,  50,  50,  50,
-                    50,  50,  50,  50,  50,  50,  50,  50,
-                     0,   0,  10,  20,  20,  10,   0,   0,
-                     0,   0,  10,  20,  20,  10,   0,   0,
-                     0,   0,  10,  20,  20,  10,   0,   0,
-                     0,   0,  10,  20,  20,  10,   0,   0,
-                     0,   0,  10,  20,  20,  10,   0,   0,
-                     0,   0,   0,  20,  20,   0,   0,   0
-                ]), 
-                black_king_score: ChessBoard([
-                    0,   0,   0,   0,   0,   0,   0,   0,
-                    0,   0,   5,   5,   5,   5,   0,   0,
-                    0,   5,   5,  10,  10,   5,   5,   0,
-                    0,   5,  10,  20,  20,  10,   5,   0,
-                    0,   5,  10,  20,  20,  10,   5,   0,
-                    0,   0,   5,  10,  10,   5,   0,   0,
-                    0,   5,   5,  -5,  -5,   0,   5,   0,
-                    0,   0,   5,   0, -15,   0,  10,   0
+                black_rook_square_score: ChessBoard([
+                    -50,  -50,  -50,  -50,  -50,  -50,  -50,  -50,
+                    -50,  -50,  -50,  -50,  -50,  -50,  -50,  -50,
+                     0,    0,   -10,  -20,  -20,  -10,   0,   0,
+                     0,    0,   -10,  -20,  -20,  -10,   0,   0,
+                     0,    0,   -10,  -20,  -20,  -10,   0,   0,
+                     0,    0,   -10,  -20,  -20,  -10,   0,   0,
+                     0,    0,   -10,  -20,  -20,  -10,   0,   0,
+                     0,    0,    0,   -20,  -20,   0,    0,   0
+                ]),  
+                black_king_square_score: ChessBoard([
+                    0,   0,   0,  0,    0,   0,   0,   0,
+                    0,   0,  -5,  -5,  -5,  -5,   0,   0,
+                    0,  -5,  -5,  -10, -10, -5,  -5,   0,
+                    0,  -5,  -10, -20, -20, -10, -5,   0,
+                    0,  -5,  -10, -20, -20, -10, -5,   0,
+                    0,   0,  -5,  -10, -10, -5,   0,   0,
+                    0,  -5,  -5,   5,   5,   0,  -5,   0,
+                    0,   0,  -5,   0,   15,  0,  -10,  0
                 ]),
 
             }

@@ -1,13 +1,15 @@
-use debug::FenString;
-use pieces::tables::init_statics;
-use crate::pieces::pieces_controller::{MoveList, is_square_attacked_black, is_square_attacked_white, BoardSlots};
-use board_components::Color;
 pub mod constants;
 pub mod board_components;
 pub mod pieces;
 pub mod helper_macros;
 pub mod debug;
+pub mod eveluation;
 
+use debug::FenString;
+use pieces::tables::init_statics;
+use crate::pieces::pieces_controller::{MoveList, is_square_attacked_black, is_square_attacked_white, BoardSlots};
+use board_components::Color;
+use eveluation::minimax;
 
 pub fn get_moves(fen: String) -> Vec<String> {
     init_statics();
@@ -23,6 +25,9 @@ pub fn make_move(fen: String, move_name: String) -> String {
     let mut board = FenString::new(fen).convert_to_board();
     let moves = MoveList::new(&board);
     let mov = moves.iterate_moves().find(|mov| mov.get_move_name() == move_name).unwrap();
+    board.make_move(mov);
+    let (mov, score) = minimax(board, 5);
+    println!("{} {}", mov, score);
     board.make_move(mov);
     FenString::from_board(&board).get_fen_string()
 }
