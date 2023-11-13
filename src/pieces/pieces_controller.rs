@@ -261,7 +261,7 @@ impl std::fmt::Display for BoardStatus {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct MoveBitField(u64);
 impl MoveBitField {
     pub const NO_MOVE: MoveBitField = MoveBitField(0);

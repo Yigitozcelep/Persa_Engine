@@ -26,10 +26,15 @@ pub fn make_move(fen: String, move_name: String) -> String {
     let moves = MoveList::new(&board);
     let mov = moves.iterate_moves().find(|mov| mov.get_move_name() == move_name).unwrap();
     board.make_move(mov);
-    let (mov, score) = minimax(board, 7);
-    println!("{} {}", mov, score);
-    board.make_move(mov);
     FenString::from_board(&board).get_fen_string()
+}
+
+pub fn get_best_move(fen: String, depth: isize) -> String {
+    let mut board = FenString::new(fen).convert_to_board();
+    let (mov, score) = minimax(board, depth);
+    board.make_move(mov);
+    println!("{} {}", mov, score);
+    mov.get_move_name() + ";" + &score.to_string() + ";" + &FenString::from_board(&board).get_fen_string()
 }
 
 pub fn is_king_attacked(fen: String) -> bool {

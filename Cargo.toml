@@ -21,5 +21,8 @@ lto = "fat"
 panic = "abort"
 opt-level = 3
 
+[profile.test]
+opt-level = 3
+
 [dependencies]
 

@@ -39,7 +39,7 @@ fn mini(board_status: BoardStatus, depth: isize, alpha: isize, mut beta: isize) 
     }
     
     if move_count == 0 {
-        if is_square_attacked_black(&board_status, board_status[BoardSlots::BlackKing].get_lsb_index()) {return 5000 + depth;}
+        if is_square_attacked_black(&board_status, board_status[BoardSlots::BlackKing].get_lsb_index()) {return 50000 + depth;}
         return 0;
     }
     min_val
@@ -55,13 +55,12 @@ fn maxi(board_status: BoardStatus, depth: isize, mut alpha: isize, beta: isize) 
         if !board.make_move(mov) {continue;}
         move_count += 1;
         let val = mini(board, depth - 1, alpha, beta);
-        if val == isize::MIN as isize {println!("{} {}", board_status, mov)}
         max_val = isize::max(max_val, val);
         alpha = isize::max(alpha, max_val);
         if beta <= alpha {break;}
     }
     if move_count == 0 {
-        if is_square_attacked_white(&board_status, board_status[BoardSlots::WhiteKing].get_lsb_index()) {return -5000 - depth;}
+        if is_square_attacked_white(&board_status, board_status[BoardSlots::WhiteKing].get_lsb_index()) {return -50000 - depth;}
         return 0;
     }
     max_val
@@ -89,6 +88,7 @@ fn get_white_best(board_status: BoardStatus, depth: isize) -> (MoveBitField, isi
 
 fn get_black_best(board_status: BoardStatus, depth: isize) -> (MoveBitField, isize){
     debug_assert_ne!(0, depth);
+
     let move_list = MoveList::new(&board_status);
     let alpha = isize::MIN;
     let mut beta  = isize::MAX;
@@ -112,8 +112,5 @@ pub fn minimax(board_status: BoardStatus, depth: isize) -> (MoveBitField, isize)
         Color::White => get_white_best(board_status, depth),
         Color::Black => get_black_best(board_status, depth),
     }
-}
-                                                                                                            
-                                                                                                            
-                                                                                                            
+}                                                                                                                                                                                                                                                                                              
                                                                                                             
