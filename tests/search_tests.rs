@@ -73,9 +73,9 @@ pub fn find_mate() {
 #[test]
 pub fn tempo_tests() {
     init_statics();
-    let fens = [
-        "8/5k2/5n2/4K1Q1/8/8/8/8 w - - 28 15",
-        "8/5K2/5N2/4k1q1/8/8/8/8 b - - 28 15",
-    ];
-    
+    //let fens = [
+    //    "8/5k2/5n2/4K1Q1/8/8/8/8 w - - 28 15",
+    //    "8/5K2/5N2/4k1q1/8/8/8/8 b - - 28 15",
+    //];
+
 }

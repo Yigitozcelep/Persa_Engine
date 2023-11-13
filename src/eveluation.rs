@@ -8,17 +8,17 @@ pub fn eveluate(board_status: &BoardStatus) -> isize {
     
     for square in board_status[BoardSlots::WhitePawn]   {score += MATERIAL_SCORES.white_pawn_square_score[square];   score += MATERIAL_SCORES.pawn_score }   
     for square in board_status[BoardSlots::WhiteBishop] {score += MATERIAL_SCORES.white_bishop_square_score[square]; score += MATERIAL_SCORES.bishop_score;}   
-    for square in board_status[BoardSlots::WhiteKing]   {score += MATERIAL_SCORES.white_king_square_score[square];   score += MATERIAL_SCORES.king_score;}   
+    for square in board_status[BoardSlots::WhiteKing]   {score += MATERIAL_SCORES.white_king_square_score[square];}   
     for square in board_status[BoardSlots::WhiteKnight] {score += MATERIAL_SCORES.white_knight_square_score[square]; score += MATERIAL_SCORES.knight_score;}   
     for square in board_status[BoardSlots::WhiteRook]   {score += MATERIAL_SCORES.white_rook_square_score[square];   score += MATERIAL_SCORES.rook_score;}
-    for _ in board_status[BoardSlots::WhiteQueen]  {score += MATERIAL_SCORES.queen_score;}
+    for _ in board_status[BoardSlots::WhiteQueen]       {score += MATERIAL_SCORES.queen_score;}
 
     for square in board_status[BoardSlots::BlackPawn]   {score += MATERIAL_SCORES.black_pawn_square_score[square];   score -= MATERIAL_SCORES.pawn_score;}   
     for square in board_status[BoardSlots::BlackBishop] {score += MATERIAL_SCORES.black_bishop_square_score[square]; score -= MATERIAL_SCORES.bishop_score;}   
-    for square in board_status[BoardSlots::BlackKing]   {score += MATERIAL_SCORES.black_king_square_score[square];   score -= MATERIAL_SCORES.king_score;}   
+    for square in board_status[BoardSlots::BlackKing]   {score += MATERIAL_SCORES.black_king_square_score[square];}   
     for square in board_status[BoardSlots::BlackKnight] {score += MATERIAL_SCORES.black_knight_square_score[square]; score -= MATERIAL_SCORES.knight_score;}   
     for square in board_status[BoardSlots::BlackRook]   {score += MATERIAL_SCORES.black_rook_square_score[square];   score -= MATERIAL_SCORES.rook_score;}
-    for _ in board_status[BoardSlots::BlackQueen]  {score -= MATERIAL_SCORES.queen_score;}
+    for _ in board_status[BoardSlots::BlackQueen]       {score -= MATERIAL_SCORES.queen_score;}
     
     score                                                                                                   
 }
@@ -39,7 +39,7 @@ fn mini(board_status: BoardStatus, depth: isize, alpha: isize, mut beta: isize) 
     }
     
     if move_count == 0 {
-        if is_square_attacked_black(&board_status, board_status[BoardSlots::BlackKing].get_lsb_index()) {return 50000 + depth;}
+        if is_square_attacked_black(&board_status, board_status[BoardSlots::BlackKing].get_lsb_index()) {return 5000000 + depth;}
         return 0;
     }
     min_val
@@ -60,10 +60,10 @@ fn maxi(board_status: BoardStatus, depth: isize, mut alpha: isize, beta: isize) 
         if beta <= alpha {break;}
     }
     if move_count == 0 {
-        if is_square_attacked_white(&board_status, board_status[BoardSlots::WhiteKing].get_lsb_index()) {return -50000 - depth;}
+        if is_square_attacked_white(&board_status, board_status[BoardSlots::WhiteKing].get_lsb_index()) {return -5000000 - depth;}
         return 0;
     }
-    max_val
+    max_val - depth
 }
 
 fn get_white_best(board_status: BoardStatus, depth: isize) -> (MoveBitField, isize) {
