@@ -179,7 +179,7 @@ impl Mul<u8> for Direction {
 }
 
 #[repr(usize)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Color {
     White = 0,
     Black = 1,

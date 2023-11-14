@@ -1,5 +1,5 @@
 use std::fs;
-use persa_chess::{debug::{FenString, perft_driver}, pieces::{tables::init_statics, pieces_controller::{MoveBitField, BoardSlots}}, eveluation::minimax};
+use persa_chess::{debug::{FenString, perft_driver}, pieces::{tables::init_statics, pieces_controller::{MoveBitField, BoardSlots}}, eveluation::find_best_move};
 use persa_chess::pieces::pieces_controller::{is_square_attacked_black, is_square_attacked_white, MoveList};
 
 #[test]
@@ -54,16 +54,16 @@ pub fn find_mate() {
     for fen in fens {
         let mut board = FenString::new(fen.to_string()).convert_to_board();
         for _ in 0..6 {
-            let (mov, _) = minimax(board, 5);
+            let (mov, _) = find_best_move(board, 5);
             if mov == MoveBitField::NO_MOVE {break;}
             board.make_move(mov);
         }
         match board.get_color() {
             persa_chess::board_components::Color::White => {
-                if !is_square_attacked_white(&board, board[BoardSlots::WhiteKing].get_lsb_index()) || !MoveList::new(&board).count == 0 {panic!("can not find mate")}
+                if !is_square_attacked_white(&board, board[BoardSlots::WhiteKing].get_lsb_index()) || !MoveList::new(&board).count == 0 {panic!("{} can not find mate", board)}
             },
             persa_chess::board_components::Color::Black => {
-                if !is_square_attacked_black(&board, board[BoardSlots::BlackKing].get_lsb_index()) || !MoveList::new(&board).count == 0 {panic!("can not find mate")}
+                if !is_square_attacked_black(&board, board[BoardSlots::BlackKing].get_lsb_index()) || !MoveList::new(&board).count == 0 {panic!("{} can not find mate", board)}
             },
         }
     }

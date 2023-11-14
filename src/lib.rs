@@ -9,7 +9,7 @@ use debug::FenString;
 use pieces::tables::init_statics;
 use crate::pieces::pieces_controller::{MoveList, is_square_attacked_black, is_square_attacked_white, BoardSlots};
 use board_components::Color;
-use eveluation::minimax;
+use eveluation::find_best_move;
 
 pub fn get_moves(fen: String) -> Vec<String> {
     init_statics();
@@ -31,7 +31,7 @@ pub fn make_move(fen: String, move_name: String) -> String {
 
 pub fn get_best_move(fen: String, depth: isize) -> String {
     let mut board = FenString::new(fen).convert_to_board();
-    let (mov, score) = minimax(board, depth);
+    let (mov, score) = find_best_move(board, depth);
     board.make_move(mov);
     println!("{} {}", mov, score);
     mov.get_move_name() + ";" + &score.to_string() + ";" + &FenString::from_board(&board).get_fen_string()
