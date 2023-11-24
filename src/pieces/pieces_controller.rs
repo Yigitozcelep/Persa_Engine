@@ -8,6 +8,7 @@ use crate::constants::board_constants::{EMPTY_BITBOARD, RANK1, RANK2, RANK7, RAN
 use std::mem::{transmute, MaybeUninit};
 use std::ops::{Index, IndexMut};
 
+
 static CASTLING_RIGHTS: ChessBoard<u8> = ChessBoard::from([
    13, 15, 15, 15, 12, 15, 15, 14,
    15, 15, 15, 15, 15, 15, 15, 15,
@@ -161,11 +162,6 @@ impl BoardStatus {
         self[BoardSlots::AllPieces].toggle_bit(square)
     }
 
-    pub fn undo_move(&mut self, copy_data: Self) {
-        for slot in BoardSlots::iterate_all_slots() {
-            self[slot] = copy_data[slot]
-        }
-    }
 
     #[inline(always)]
     pub fn make_move(&mut self, mov: MoveBitField) -> bool {

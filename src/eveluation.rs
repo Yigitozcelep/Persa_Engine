@@ -43,8 +43,24 @@ pub fn find_best_move(board_status: BoardStatus, depth: isize) -> (MoveBitField,
     (best_move, alpha)
 }
 
+
+fn quiescence(board_status: BoardStatus, beta: isize, mut alpha: isize) -> isize {
+    let stdpt = eveluate(&board_status);
+    if stdpt >= beta {return beta}
+    alpha = isize::max(alpha, stdpt);
+    for mov in MoveList::new(&board_status).iterate_moves().filter(MoveBitField::is_move_capture) {
+        let mut board = board_status;
+        if !board.make_move(mov) {continue;}
+        let score = -quiescence(board, -alpha, -beta);
+        if score >= beta {return beta;}
+        alpha = isize::max(alpha, score);
+    }   
+
+    alpha
+}
+
 fn negamax(board_status: BoardStatus, beta: isize, mut alpha: isize, depth: isize) -> isize {
-    if depth == 0 {return eveluate(&board_status);}
+    if depth == 0 {return quiescence(board_status, beta, alpha);}
     let move_list = MoveList::new(&board_status);
     let mut move_count = 0;
     for mov in move_list.iterate_moves() {
