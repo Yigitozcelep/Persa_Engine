@@ -185,7 +185,6 @@ pub enum Color {
     Black = 1,
 }
 
-
 pub struct MagicNumGenerator(u32);
 impl MagicNumGenerator {
     pub fn new() -> Self {

@@ -78,6 +78,12 @@ impl BoardSlots {
     pub fn iterate_board_slots(start: BoardSlots, end: BoardSlots) -> impl Iterator<Item=BoardSlots> {
         unsafe {(start as usize..=end as usize).map(|num| transmute(num))}
     }
+    pub fn iterate_color_pieces(color: Color) -> impl Iterator<Item = BoardSlots> {
+        match color {
+            Color::White => Self::iterate_board_slots(Self::WhitePawn, Self::WhiteKing),
+            Color::Black => Self::iterate_board_slots(Self::BlackPawn, Self::BlackKing),
+        }
+    }
 
     #[inline(always)]
     pub fn iterate_pieces() -> impl Iterator<Item=BoardSlots> {
@@ -162,6 +168,13 @@ impl BoardStatus {
         self[BoardSlots::AllPieces].toggle_bit(square)
     }
 
+    #[inline(always)]
+    pub fn get_other_color(&self) -> Color {
+        match self.color {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        }
+    }
 
     #[inline(always)]
     pub fn make_move(&mut self, mov: MoveBitField) -> bool {
@@ -297,6 +310,12 @@ impl MoveBitField {
         self
     }
 
+    pub fn set_score(&mut self, board_status: &BoardStatus, other_color: Color) {
+        self.0 |= score_move(board_status, *self, other_color) << 24;
+    }
+    #[inline(always)]
+    pub fn get_score(&self) -> u64 { (self.0 >> 24) & 0xfff}
+
     #[inline(always)]
     pub fn get_source(&self) -> Square { Square((self.0 & 0x3f) as u8) }
     
@@ -425,8 +444,16 @@ impl MoveList {
                 res.generate_king_moves(board_status, BoardSlots::BlackKing, BoardSlots::BlackPieces, BoardSlots::WhitePieces, E8, CastleSlots::BlackKingSide, CastleSlots::BlackQueenSide, is_square_attacked_black);
             }
         }
+        let other_color = board_status.get_other_color();
+        unsafe {
+            res.moves[0..res.count].iter_mut().for_each(|mov| {
+                mov.assume_init_mut().set_score(board_status, other_color);
+            });
+            res.moves[0..res.count].sort_by(|mov1, mov2| mov2.assume_init().get_score().cmp(&mov1.assume_init().get_score()));
+        }
         res
     }
+
     #[inline(always)]
     pub fn append_move(&mut self, mov: MoveBitField) {
         self.moves[self.count].write(mov);
@@ -438,7 +465,7 @@ impl MoveList {
         double_move_line: BitBoard, fnish_line: BitBoard, pawn: BoardSlots, enemy_color: Color, queen: BoardSlots, 
         rook: BoardSlots, bishop: BoardSlots, knight: BoardSlots, enemy_pieces: BoardSlots) {
         
-        for square in board_status[pawn].clone() {
+        for square in board_status[pawn] {
             let target = square + mov_dir;
             if !board_status[BoardSlots::AllPieces].is_square_set(target) {
                 if fnish_line.is_square_set(target) {
@@ -524,7 +551,6 @@ impl MoveList {
     pub fn iterate_moves<'a>(&'a self) -> impl Iterator<Item = MoveBitField> + 'a {
         (0..self.count).map(|i| self[i])
     }
-
 }
 
 impl Index<usize> for MoveList {
@@ -535,6 +561,48 @@ impl Index<usize> for MoveList {
     
 }
 
+
+
+struct MmvLva([[u64; 12]; 12]);
+impl std::ops::Index<(BoardSlots, BoardSlots)> for MmvLva {
+    type Output = u64;
+    #[inline(always)]
+    fn index(&self, index: (BoardSlots, BoardSlots)) -> &Self::Output {
+        &self.0[index.0 as usize][index.1 as usize]
+    }
+}
+
+// Victims: Pawn Kniht Bishop Rook Queen
+// Attackers: Pawn Knight Bishop Rook Queen King
+static MMV_LVA: MmvLva = MmvLva([
+    [105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,],
+    [104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604,],
+    [103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603,],
+    [102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602,],
+    [101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601,],
+    [100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600,],
+  
+    [105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,],
+    [104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604,],
+    [103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603,],
+    [102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602,],
+    [101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601,],
+    [100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600],
+]);
+
+#[inline(always)]
+pub fn score_move(board_status: &BoardStatus, mov: MoveBitField, enemy_color: Color) -> u64 {
+    let current_piece = mov.get_piece();
+    let target_square = mov.get_target();
+    if mov.is_move_capture() { 
+        for enemy_piece in BoardSlots::iterate_color_pieces(enemy_color) {
+            if board_status[enemy_piece].is_square_set(target_square) {
+                return MMV_LVA[(current_piece, enemy_piece)];
+            }
+        }
+    }
+    return 0;
+}
 
 
 

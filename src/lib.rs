@@ -11,9 +11,7 @@ use crate::pieces::pieces_controller::{MoveList, is_square_attacked_black, is_sq
 use board_components::Color;
 use eveluation::find_best_move;
 
-pub fn init_all_statics() {
-    init_statics();
-}
+pub fn init_all_statics() { init_statics(); }
 
 pub fn get_moves(fen: String) -> Vec<String> {
     let board = FenString::new(fen.clone()).convert_to_board();

@@ -1,6 +1,7 @@
-use std::fs;
+use std::{fs, collections::HashMap};
 use persa_chess::{debug::{FenString, perft_driver}, pieces::{tables::init_statics, pieces_controller::{MoveBitField, BoardSlots}}, eveluation::find_best_move};
 use persa_chess::pieces::pieces_controller::{is_square_attacked_black, is_square_attacked_white, MoveList};
+
 
 #[test]
 #[ignore]
@@ -23,6 +24,7 @@ pub fn test_pertfs() {
 }
 
 #[test]
+#[ignore]
 pub fn find_mate() {
     init_statics();
     let fens = [
@@ -69,13 +71,34 @@ pub fn find_mate() {
     }
 }
 
-
+// Victims: Pawn Kniht Bishop Rook Queen
+// Attackers: Pawn Knight Bishop Rook Queen King
 #[test]
-pub fn tempo_tests() {
+pub fn test_score_move_captures() {
     init_statics();
-    //let fens = [
-    //    "8/5k2/5n2/4K1Q1/8/8/8/8 w - - 28 15",
-    //    "8/5K2/5N2/4k1q1/8/8/8/8 b - - 28 15",
-    //];
-
+    let mut results: HashMap<String, isize> = HashMap::new();
+    results.insert("d5e4".to_string(), 105);
+    results.insert("e5d4".to_string(), 105);
+    results.insert("e5f4".to_string(), 205);
+    results.insert("c6d4".to_string(), 104);  
+    results.insert("f6e4".to_string(), 104);  
+    results.insert("f6d7".to_string(), 504);  
+    results.insert("b4c3".to_string(), 103);  
+    results.insert("g4h3".to_string(), 103);  
+    results.insert("g4d7".to_string(), 503);  
+    results.insert("g6g5".to_string(), 302);
+    results.insert("d8d7".to_string(), 502);
+    results.insert("d3f1".to_string(), 301); 
+    results.insert("d3c3".to_string(), 101); 
+    results.insert("d3g3".to_string(), 401); 
+    results.insert("d3d4".to_string(), 101); 
+    results.insert("d3e4".to_string(), 101); 
+    results.insert("d3b5".to_string(), 201);
+    let board = FenString::new("3r1k2/pppQ1pp1/2n2nr1/1N1pp1Bp/1b1PPNb1/2Pq2RP/PP3PP1/4KB1R b K - 17 16".to_string()).convert_to_board();
+    
+    for mov in MoveList::new(&board).iterate_moves().filter(|mov| mov.is_move_capture()) {
+        println!("{}  calculated: {}  should be: {}", mov, mov.get_score(), results[&mov.get_move_name()]);
+        assert_eq!(results[&mov.get_move_name()], mov.get_score() as isize);
+    }
+    
 }

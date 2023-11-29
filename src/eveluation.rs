@@ -3,6 +3,8 @@ use crate::board_components::Color;
 use crate::constants::eveluation_constants::MATERIAL_SCORES;
 use crate::pieces::pieces_controller::{is_square_attacked_black, is_square_attacked_white};
 
+
+#[inline(always)]
 pub fn eveluate(board_status: &BoardStatus) -> isize {
     let mut score: isize = 0;
     
@@ -25,6 +27,7 @@ pub fn eveluate(board_status: &BoardStatus) -> isize {
         Color::Black => -score,
     }
 }
+
 
 pub fn find_best_move(board_status: BoardStatus, depth: isize) -> (MoveBitField, isize) {
     let move_list = MoveList::new(&board_status);
@@ -60,7 +63,7 @@ fn quiescence(board_status: BoardStatus, beta: isize, mut alpha: isize) -> isize
 }
 
 fn negamax(board_status: BoardStatus, beta: isize, mut alpha: isize, depth: isize) -> isize {
-    if depth == 0 {return quiescence(board_status, beta, alpha);}
+    if depth == 0 { return quiescence(board_status, beta, alpha); }
     let move_list = MoveList::new(&board_status);
     let mut move_count = 0;
     for mov in move_list.iterate_moves() {
