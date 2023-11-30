@@ -591,7 +591,7 @@ static MMV_LVA: MmvLva = MmvLva([
 ]);
 
 #[inline(always)]
-pub fn score_move(board_status: &BoardStatus, mov: MoveBitField, enemy_color: Color) -> u64 {
+fn score_move(board_status: &BoardStatus, mov: MoveBitField, enemy_color: Color) -> u64 {
     let current_piece = mov.get_piece();
     let target_square = mov.get_target();
     if mov.is_move_capture() { 
