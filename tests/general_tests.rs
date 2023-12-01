@@ -1,5 +1,5 @@
 use std::{fs, collections::HashMap};
-use persa_chess::{debug::{FenString, perft_driver}, pieces::{tables::init_statics, pieces_controller::{MoveBitField, BoardSlots}}, eveluation::find_best_move};
+use persa_chess::{debug::{FenString, perft_driver}, pieces::{tables::init_statics, pieces_controller::{MoveBitField, BoardSlots}}, eveluation::find_best_move, uci::UciInformation};
 use persa_chess::pieces::pieces_controller::{is_square_attacked_black, is_square_attacked_white, MoveList};
 
 
@@ -24,7 +24,6 @@ pub fn test_pertfs() {
 }
 
 #[test]
-#[ignore]
 pub fn find_mate() {
     init_statics();
     let fens = [
@@ -54,18 +53,20 @@ pub fn find_mate() {
         "1r5r/k4ppp/2p2q2/Q3n3/8/1P1B2P1/P4P1P/5RK1 b - - 1 2",
     ];
     for fen in fens {
-        let mut board = FenString::new(fen.to_string()).convert_to_board();
+        let mut uci_info = UciInformation::new()
+                                        .set_depth_limit(6)
+                                        .set_board(FenString::new(fen.to_string()).convert_to_board());
         for _ in 0..6 {
-            let (mov, _) = find_best_move(board, 5);
+            let (mov, _) = find_best_move(&mut uci_info);
             if mov == MoveBitField::NO_MOVE {break;}
-            board.make_move(mov);
+            uci_info.board.make_move(mov);
         }
-        match board.get_color() {
+        match uci_info.board.get_color() {
             persa_chess::board_components::Color::White => {
-                if !is_square_attacked_white(&board, board[BoardSlots::WhiteKing].get_lsb_index()) || !MoveList::new(&board).count == 0 {panic!("{} can not find mate", board)}
+                if !is_square_attacked_white(&uci_info.board, uci_info.board[BoardSlots::WhiteKing].get_lsb_index()) || !MoveList::new(&uci_info.board).count == 0 {panic!("{} can not find mate", uci_info.board)}
             },
             persa_chess::board_components::Color::Black => {
-                if !is_square_attacked_black(&board, board[BoardSlots::BlackKing].get_lsb_index()) || !MoveList::new(&board).count == 0 {panic!("{} can not find mate", board)}
+                if !is_square_attacked_black(&uci_info.board, uci_info.board[BoardSlots::BlackKing].get_lsb_index()) || !MoveList::new(&uci_info.board).count == 0 {panic!("{} can not find mate", uci_info.board)}
             },
         }
     }
@@ -97,8 +98,12 @@ pub fn test_score_move_captures() {
     let board = FenString::new("3r1k2/pppQ1pp1/2n2nr1/1N1pp1Bp/1b1PPNb1/2Pq2RP/PP3PP1/4KB1R b K - 17 16".to_string()).convert_to_board();
     
     for mov in MoveList::new(&board).iterate_moves().filter(|mov| mov.is_move_capture()) {
-        println!("{}  calculated: {}  should be: {}", mov, mov.get_score(), results[&mov.get_move_name()]);
         assert_eq!(results[&mov.get_move_name()], mov.get_score() as isize);
     }
+}
+
+pub fn uci_tests () {
+    
     
 }
+

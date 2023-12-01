@@ -2,6 +2,7 @@ use crate::pieces::pieces_controller::{BoardSlots, BoardStatus, MoveList, MoveBi
 use crate::board_components::Color;
 use crate::constants::eveluation_constants::MATERIAL_SCORES;
 use crate::pieces::pieces_controller::{is_square_attacked_black, is_square_attacked_white};
+use crate::uci::UciInformation;
 
 
 #[inline(always)]
@@ -29,15 +30,17 @@ pub fn eveluate(board_status: &BoardStatus) -> isize {
 }
 
 
-pub fn find_best_move(board_status: BoardStatus, depth: isize) -> (MoveBitField, isize) {
-    let move_list = MoveList::new(&board_status);
+pub fn find_best_move(uci_info: &mut UciInformation) -> (MoveBitField, isize) {
+    if uci_info.depth_limit == 0 {return (MoveBitField::NO_MOVE, 0);}
+    let move_list = MoveList::new(&uci_info.board);
     let mut best_move = MoveBitField::NO_MOVE;
     let beta = 1000000;
     let mut alpha = -1000000;
     for mov in move_list.iterate_moves() {
-        let mut board = board_status;
-        if !board.make_move(mov) {continue;}
-        let score = -negamax(board, -alpha, -beta, depth -1);
+        let board = uci_info.board;
+        if !uci_info.board.make_move(mov) {continue;}
+        let score = -negamax(uci_info, -alpha, -beta, uci_info.depth_limit -1);
+        uci_info.board = board;
         if score > alpha {
             alpha = score;
             best_move = mov;
@@ -47,42 +50,44 @@ pub fn find_best_move(board_status: BoardStatus, depth: isize) -> (MoveBitField,
 }
 
 
-fn quiescence(board_status: BoardStatus, beta: isize, mut alpha: isize) -> isize {
-    let stdpt = eveluate(&board_status);
+fn quiescence(uci_info: &mut UciInformation, beta: isize, mut alpha: isize) -> isize {
+    let stdpt = eveluate(&uci_info.board);
     if stdpt >= beta {return beta}
     alpha = isize::max(alpha, stdpt);
-    for mov in MoveList::new(&board_status).iterate_moves().filter(MoveBitField::is_move_capture) {
-        let mut board = board_status;
-        if !board.make_move(mov) {continue;}
-        let score = -quiescence(board, -alpha, -beta);
-        if score >= beta {return beta;}
-        alpha = isize::max(alpha, score);
+    for mov in MoveList::new(&uci_info.board).iterate_moves().filter(MoveBitField::is_move_capture) {
+        let old_board = uci_info.board;
+        if uci_info.board.make_move(mov) {
+            let score = -quiescence(uci_info, -alpha, -beta);
+            if score >= beta {return beta;}
+            alpha = isize::max(alpha, score);
+        }
+        uci_info.board = old_board;
     }   
-
     alpha
 }
 
-fn negamax(board_status: BoardStatus, beta: isize, mut alpha: isize, depth: isize) -> isize {
-    if depth == 0 { return quiescence(board_status, beta, alpha); }
-    let move_list = MoveList::new(&board_status);
+fn negamax(uci_info: &mut UciInformation, beta: isize, mut alpha: isize, depth: isize) -> isize {
+    if depth == 0 { return quiescence(uci_info, beta, alpha); }
+    let move_list = MoveList::new(&uci_info.board);
     let mut move_count = 0;
     for mov in move_list.iterate_moves() {
-        let mut board = board_status;
-        if !board.make_move(mov) {continue;}
-        move_count += 1;
-        let score = -negamax(board, -alpha, -beta, depth - 1);
-        if score >= beta {return beta;}
-        alpha = isize::max(score, alpha);
+        let old_board = uci_info.board;
+        if uci_info.board.make_move(mov) {
+            let score = -negamax(uci_info, -alpha, -beta, depth - 1);
+            if score >= beta {return beta;}
+            alpha = isize::max(score, alpha);
+            move_count += 1;
+        }
+        uci_info.board = old_board;
     }
     if move_count == 0 {
-        if board_status.get_color() == Color::White {
-            if is_square_attacked_white(&board_status, board_status[BoardSlots::WhiteKing].get_lsb_index()) {return -50000 - depth;}
+        if uci_info.board.get_color() == Color::White {
+            if is_square_attacked_white(&uci_info.board, uci_info.board[BoardSlots::WhiteKing].get_lsb_index()) {return -50000 - depth;}
         }
         else {
-            if is_square_attacked_black(&board_status, board_status[BoardSlots::BlackKing].get_lsb_index()) {return -50000 - depth;}
+            if is_square_attacked_black(&uci_info.board, uci_info.board[BoardSlots::BlackKing].get_lsb_index()) {return -50000 - depth;}
         }
         return 0;
     }
     alpha
 }
-

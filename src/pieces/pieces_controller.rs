@@ -603,6 +603,3 @@ fn score_move(board_status: &BoardStatus, mov: MoveBitField, enemy_color: Color)
     }
     return 0;
 }
-
-
-
