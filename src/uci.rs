@@ -1,11 +1,11 @@
 use std::cmp::Ordering;
 use std::str::SplitWhitespace;
 use std::time::{Instant, Duration};
-
 use crate::pieces::pieces_controller::{BoardStatus, MoveBitField};
 use crate::debug::FenString;
 use crate::pieces::pieces_controller::MoveList;
 use std::sync::{Arc, RwLock};
+use crate::eveluation::find_best_move;
 
 const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -38,7 +38,7 @@ impl UciInformation {
             winc              : 0,
             binc              : 0,
             moves_to_go       : None,
-            depth_limit       : 0,
+            depth_limit       : 1,
             nodes_limit       : None,
             search_until_mate : false,
             node_count        : 0,
@@ -155,7 +155,16 @@ pub fn go(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
             _ => break,
         }
     }
-    uci_info.start_time = Instant::now();
+    let stop_signal = uci_info.stop_signal.clone();
+    
+    let some_thread = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(1));
+        println!("muz");
+        *stop_signal.write().unwrap() = true;
+    });
+    let res = find_best_move(uci_info);
+    println!("{}", res.0);
+    some_thread.join().unwrap();
 }
 
 pub fn uci_loop() {
@@ -172,7 +181,7 @@ pub fn uci_loop() {
             Some("go")       => go(data, &mut uci_info),
             Some("position") => position(data, &mut uci_info),
             Some("stop")     => (),
-            _                => ()
+            _                => println!("unkown argument"),
         }
     }
 }

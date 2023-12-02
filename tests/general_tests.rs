@@ -101,9 +101,3 @@ pub fn test_score_move_captures() {
         assert_eq!(results[&mov.get_move_name()], mov.get_score() as isize);
     }
 }
-
-pub fn uci_tests () {
-    
-    
-}
-
