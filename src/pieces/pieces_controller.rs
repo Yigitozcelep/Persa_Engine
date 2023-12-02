@@ -1,5 +1,7 @@
+use crate::uci::UciInformation;
 use crate::board_components::{BitBoard, Color, Square, Direction, ChessBoard};
 use crate::constants::board_constants::ASCII_PIECES;
+use crate::constants::eveluation_constants::MMV_LVA;
 use crate::constants::directions::{NORTH, SOUTH, WEST, EAST};
 use crate::constants::squares::*;
 use crate::debug::FenString;
@@ -160,7 +162,6 @@ impl BoardStatus {
         self.boards[BoardSlots::AllPieces as usize].set_bit(square);
     }
 
-
     #[inline(always)]
     pub fn remove_piece(&mut self, piece: BoardSlots, square: Square) {
         self[piece].toggle_bit(square);
@@ -185,7 +186,8 @@ impl BoardStatus {
         let promoted      = mov.get_promoted();
         
         self.enpassant = NO_SQUARE;
-        
+        self.half_move += 1;
+
         self.remove_piece(piece, source_square);
         if MoveBitField::is_move_promoted(promoted) { self.set_piece_bit(promoted, target_square);}
         else { self.set_piece_bit(piece, target_square); }
@@ -310,11 +312,11 @@ impl MoveBitField {
         self
     }
 
-    pub fn set_score(&mut self, board_status: &BoardStatus, other_color: Color) {
-        self.0 |= score_move(board_status, *self, other_color) << 24;
+    pub fn set_score(&mut self, uci_info: &UciInformation, other_color: Color) {
+        self.0 |= score_move(uci_info, *self, other_color) << 24;
     }
     #[inline(always)]
-    pub fn get_score(&self) -> u64 { (self.0 >> 24) & 0xfff}
+    pub fn get_score(&self) -> u64 { (self.0 >> 24) & 0xffff}
 
     #[inline(always)]
     pub fn get_source(&self) -> Square { Square((self.0 & 0x3f) as u8) }
@@ -424,9 +426,10 @@ pub fn is_square_attacked_white(board_status: &BoardStatus, square: Square) -> b
 
 impl MoveList {
     #[inline(always)]
-    pub fn new(board_status: &BoardStatus) -> Self {
+    pub fn new(uci_info: &UciInformation) -> Self {
         let mut res =  unsafe { Self { moves: MaybeUninit::uninit().assume_init(), count: 0, }};
-        match board_status.color {
+        let board_status = &uci_info.board;
+        match board_status.get_color() {
             Color::White => {
                 res.generate_pawn_moves(&board_status, NORTH, RANK2, RANK8, BoardSlots::WhitePawn, Color::Black, BoardSlots::WhiteQueen, BoardSlots::WhiteRook, BoardSlots::WhiteBishop, BoardSlots::WhiteKnight, BoardSlots::BlackPieces);
                 res.generate_non_sliding_moves(generate_knight_attacks, &board_status, BoardSlots::WhiteKnight, BoardSlots::WhitePieces, BoardSlots::BlackPieces);
@@ -447,7 +450,7 @@ impl MoveList {
         let other_color = board_status.get_other_color();
         unsafe {
             res.moves[0..res.count].iter_mut().for_each(|mov| {
-                mov.assume_init_mut().set_score(board_status, other_color);
+                mov.assume_init_mut().set_score(uci_info, other_color);
             });
             res.moves[0..res.count].sort_by(|mov1, mov2| mov2.assume_init().get_score().cmp(&mov1.assume_init().get_score()));
         }
@@ -562,44 +565,33 @@ impl Index<usize> for MoveList {
 }
 
 
-
-struct MmvLva([[u64; 12]; 12]);
-impl std::ops::Index<(BoardSlots, BoardSlots)> for MmvLva {
-    type Output = u64;
-    #[inline(always)]
-    fn index(&self, index: (BoardSlots, BoardSlots)) -> &Self::Output {
-        &self.0[index.0 as usize][index.1 as usize]
-    }
-}
-
-// Victims: Pawn Kniht Bishop Rook Queen
-// Attackers: Pawn Knight Bishop Rook Queen King
-static MMV_LVA: MmvLva = MmvLva([
-    [105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,],
-    [104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604,],
-    [103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603,],
-    [102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602,],
-    [101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601,],
-    [100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600,],
-  
-    [105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,],
-    [104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604,],
-    [103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603,],
-    [102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602,],
-    [101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601,],
-    [100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600],
-]);
-
 #[inline(always)]
-fn score_move(board_status: &BoardStatus, mov: MoveBitField, enemy_color: Color) -> u64 {
+fn score_move(uci_info: &UciInformation, mov: MoveBitField, enemy_color: Color) -> u64 {
     let current_piece = mov.get_piece();
     let target_square = mov.get_target();
     if mov.is_move_capture() { 
         for enemy_piece in BoardSlots::iterate_color_pieces(enemy_color) {
-            if board_status[enemy_piece].is_square_set(target_square) {
+            if uci_info.board[enemy_piece].is_square_set(target_square) {
                 return MMV_LVA[(current_piece, enemy_piece)];
             }
         }
     }
+    if mov == uci_info.board_history.killer_moves[uci_info.board.half_move][0] { return 9000; }
+    if mov == uci_info.board_history.killer_moves[uci_info.board.half_move][1] { return 8000; }
     return 0;
+}
+
+pub struct BoardHistory {
+    pub killer_moves: [[MoveBitField; 2]; 64],
+}
+
+impl BoardHistory {
+    pub fn new () -> Self {
+        Self {killer_moves: [[MoveBitField::NO_MOVE; 2]; 64]}
+    }
+    
+    pub fn append_killer_move(&mut self, mov: MoveBitField, half_move: usize) {
+        self.killer_moves[half_move][1] = self.killer_moves[half_move][0];
+        self.killer_moves[half_move][0] = mov;
+    }
 }

@@ -32,30 +32,33 @@ pub fn eveluate(board_status: &BoardStatus) -> isize {
 
 pub fn find_best_move(uci_info: &mut UciInformation) -> (MoveBitField, isize) {
     if uci_info.depth_limit == 0 {return (MoveBitField::NO_MOVE, 0);}
-    let move_list = MoveList::new(&uci_info.board);
+    uci_info.node_count += 1;
+    let move_list = MoveList::new(uci_info);
     let mut best_move = MoveBitField::NO_MOVE;
     let beta = 1000000;
     let mut alpha = -1000000;
+    let old_board = uci_info.board;
     for mov in move_list.iterate_moves() {
-        let board = uci_info.board;
-        if !uci_info.board.make_move(mov) {continue;}
-        let score = -negamax(uci_info, -alpha, -beta, uci_info.depth_limit -1);
-        uci_info.board = board;
-        if score > alpha {
-            alpha = score;
-            best_move = mov;
+        if uci_info.board.make_move(mov) {
+            let score = -negamax(uci_info, -alpha, -beta, uci_info.depth_limit -1);
+            if score > alpha {
+                alpha = score;
+                best_move = mov;
+            }
         }
+        uci_info.board = old_board;
     }
     (best_move, alpha)
 }
 
-
+#[inline(always)]
 fn quiescence(uci_info: &mut UciInformation, beta: isize, mut alpha: isize) -> isize {
+    uci_info.node_count += 1;
     let stdpt = eveluate(&uci_info.board);
     if stdpt >= beta {return beta}
     alpha = isize::max(alpha, stdpt);
-    for mov in MoveList::new(&uci_info.board).iterate_moves().filter(MoveBitField::is_move_capture) {
-        let old_board = uci_info.board;
+    let old_board = uci_info.board;
+    for mov in MoveList::new(&uci_info).iterate_moves().filter(MoveBitField::is_move_capture) {
         if uci_info.board.make_move(mov) {
             let score = -quiescence(uci_info, -alpha, -beta);
             if score >= beta {return beta;}
@@ -66,15 +69,20 @@ fn quiescence(uci_info: &mut UciInformation, beta: isize, mut alpha: isize) -> i
     alpha
 }
 
+#[inline(always)]
 fn negamax(uci_info: &mut UciInformation, beta: isize, mut alpha: isize, depth: isize) -> isize {
     if depth == 0 { return quiescence(uci_info, beta, alpha); }
-    let move_list = MoveList::new(&uci_info.board);
+    uci_info.node_count += 1;
+    let move_list = MoveList::new(&uci_info);
     let mut move_count = 0;
+    let old_board = uci_info.board;
     for mov in move_list.iterate_moves() {
-        let old_board = uci_info.board;
         if uci_info.board.make_move(mov) {
             let score = -negamax(uci_info, -alpha, -beta, depth - 1);
-            if score >= beta {return beta;}
+            if score >= beta {
+                if !mov.is_move_capture() {uci_info.board_history.append_killer_move(mov, old_board.get_half_move());}
+                return beta;
+            }
             alpha = isize::max(score, alpha);
             move_count += 1;
         }

@@ -1,9 +1,8 @@
 use std::cmp::Ordering;
 use std::str::SplitWhitespace;
 use std::time::{Instant, Duration};
-use crate::pieces::pieces_controller::{BoardStatus, MoveBitField};
+use crate::pieces::pieces_controller::{BoardStatus, MoveBitField, MoveList, BoardHistory};
 use crate::debug::FenString;
-use crate::pieces::pieces_controller::MoveList;
 use std::sync::{Arc, RwLock};
 use crate::eveluation::find_best_move;
 
@@ -28,6 +27,7 @@ pub struct UciInformation {
 
     pub start_time        : Instant,
     pub node_count        : usize,
+    pub board_history     : BoardHistory,
 }
 
 impl UciInformation {
@@ -47,10 +47,11 @@ impl UciInformation {
             time_limit        : None,
             start_time        : Instant::now(),
             board             : BoardStatus::new(),
+            board_history     : BoardHistory::new(),
             stop_signal       : Arc::new(RwLock::new(false)),
         }
     }
-
+    
     pub fn is_search_fnished(&self) -> bool {
         if *self.stop_signal.read().unwrap() == true {return true;}
         if let Some(time)  = self.time_limit {
@@ -120,25 +121,26 @@ impl UciInformation {
     }
 }
 
-pub fn get_move(board_status: &BoardStatus, move_name: String) -> MoveBitField {
-    let moves = MoveList::new(board_status);
+pub fn get_move(uci_info: &UciInformation, move_name: String) -> MoveBitField {
+    let moves = MoveList::new(uci_info);
     let mov = moves.iterate_moves().find(|mov| mov.get_move_name() == move_name).unwrap();
     mov
 }
 
-pub fn position(mut data: SplitWhitespace, uci_information: &mut UciInformation) {
+pub fn position(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
     match data.next() {
-        Some("startpos") => uci_information.board = FenString::new(START_POS.to_string()).convert_to_board(),
-        Some("fen")      => uci_information.board = FenString::new(data.next().unwrap().to_string()).convert_to_board(),
+        Some("startpos") => uci_info.board = FenString::new(START_POS.to_string()).convert_to_board(),
+        Some("fen")      => uci_info.board = FenString::new(data.clone().collect::<Vec<&str>>().join(" ")).convert_to_board(),
         _ => println!("unkown arguments"),
     }
 
     if let Some("moves") = data.next() {
-        for mov in data { uci_information.board.make_move(get_move(&uci_information.board, mov.to_string())); }
+        for mov in data { uci_info.board.make_move(get_move(&uci_info, mov.to_string())); }
     }
 }
 
 pub fn go(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
+    
     loop {
         match data.next() {
             Some("wtime")     => uci_info.wtime           = data.next().unwrap().parse().unwrap(),
@@ -155,33 +157,40 @@ pub fn go(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
             _ => break,
         }
     }
-    let stop_signal = uci_info.stop_signal.clone();
+    uci_info.node_count = 0;
+    uci_info.start_time = Instant::now();
+    uci_info.board_history = BoardHistory::new();
+    *uci_info.stop_signal.write().unwrap() = false;
     
+    let stop_signal = uci_info.stop_signal.clone();
     let some_thread = std::thread::spawn(move || {
         std::thread::sleep(Duration::from_secs(1));
-        println!("muz");
         *stop_signal.write().unwrap() = true;
     });
+
     let res = find_best_move(uci_info);
-    println!("{}", res.0);
     some_thread.join().unwrap();
+    println!("{}", uci_info.node_count);
+    println!("{}", res.0);
 }
 
 pub fn uci_loop() {
     let mut input = String::new();
     let mut uci_info = UciInformation::new();
-    while !input.starts_with("quit") {
+    loop {
         input.clear();
         let _ = std::io::stdin().read_line(&mut input);
 
         let mut data = input.split_whitespace();
         match data.next() {
-            Some("uci")      => println!("id name Persa\nid author Yigit\nuciok"),
-            Some("isready")  => println!("readyok"),
-            Some("go")       => go(data, &mut uci_info),
-            Some("position") => position(data, &mut uci_info),
-            Some("stop")     => (),
-            _                => println!("unkown argument"),
+            Some("uci")         => println!("id name Persa\nid author Yigit\nuciok"),
+            Some("isready")     => println!("readyok"),
+            Some("go")          => go(data, &mut uci_info),
+            Some("position")    => position(data, &mut uci_info),
+            Some("stop")        => (),
+            Some("ucinewgame")  => uci_info = UciInformation::new(),
+            Some("quit")        => break,
+            _                   => println!("unkown argument"),
         }
     }
 }

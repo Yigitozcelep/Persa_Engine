@@ -192,7 +192,8 @@ pub mod board_constants {
 
 pub mod eveluation_constants {
     use crate::board_components::ChessBoard;
-
+    use crate::pieces::pieces_controller::BoardSlots;
+    
     pub struct MaterialScores {
         pub pawn_score:   isize,
         pub king_score:   isize,
@@ -333,4 +334,33 @@ pub mod eveluation_constants {
     }
     
     pub static MATERIAL_SCORES: MaterialScores = MaterialScores::new();
+
+    pub struct MmvLva([[u64; 12]; 12]);
+
+    impl std::ops::Index<(BoardSlots, BoardSlots)> for MmvLva {
+        type Output = u64;
+        #[inline(always)]
+        fn index(&self, index: (BoardSlots, BoardSlots)) -> &Self::Output {
+            &self.0[index.0 as usize][index.1 as usize]
+        }
+    }
+    
+    // Victims: Pawn Kniht Bishop Rook Queen
+    // Attackers: Pawn Knight Bishop Rook Queen King
+    pub static MMV_LVA: MmvLva = MmvLva([
+        [10005,20005, 30005, 40005, 50005, 60005,  10005, 20005, 30005, 40005, 50005, 60005,],
+        [10004,20004, 30004, 40004, 50004, 60004,  10004, 20004, 30004, 40004, 50004, 60004,],
+        [10003,20003, 30003, 40003, 50003, 60003,  10003, 20003, 30003, 40003, 50003, 60003,],
+        [10002,20002, 30002, 40002, 50002, 60002,  10002, 20002, 30002, 40002, 50002, 60002,],
+        [10001,20001, 30001, 40001, 50001, 60001,  10001, 20001, 30001, 40001, 50001, 60001,],
+        [10000,20000, 30000, 40000, 50000, 60000,  10000, 20000, 30000, 40000, 50000, 60000,],
+    
+        [10005,20005, 30005, 40005, 50005, 60005,  10005, 20005, 30005, 40005, 50005, 60005,],
+        [10004,20004, 30004, 40004, 50004, 60004,  10004, 20004, 30004, 40004, 50004, 60004,],
+        [10003,20003, 30003, 40003, 50003, 60003,  10003, 20003, 30003, 40003, 50003, 60003,],
+        [10002,20002, 30002, 40002, 50002, 60002,  10002, 20002, 30002, 40002, 50002, 60002,],
+        [10001,20001, 30001, 40001, 50001, 60001,  10001, 20001, 30001, 40001, 50001, 60001,],
+        [10000,20000, 30000, 40000, 50000, 60000,  10000, 20000, 30000, 40000, 50000, 60000 ],
+    ]);
+
 }

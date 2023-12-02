@@ -4,7 +4,6 @@ use persa_chess::pieces::pieces_controller::{is_square_attacked_black, is_square
 
 
 #[test]
-#[ignore]
 pub fn test_pertfs() {
     let contents = fs::read_to_string("./perfts.txt")
         .expect("Should have been able to read the file");
@@ -14,9 +13,9 @@ pub fn test_pertfs() {
         let data: Vec<&str> = part.split(";").collect();
         let fen = data[0];
         for i in 1..5 {
-            let perft = data[i].split(" ").nth(1).unwrap();
-            let board = FenString::new(fen.to_string()).convert_to_board();
-            let res = perft_driver(&board, i);
+            let uci_info = UciInformation::new().set_board(FenString::new(fen.to_string()).convert_to_board()).set_depth_limit(i);
+            let perft = data[i as usize].split(" ").nth(1).unwrap();
+            let res = perft_driver(&uci_info);
             assert_eq!(res, perft.parse().unwrap())
         }
 
@@ -63,10 +62,10 @@ pub fn find_mate() {
         }
         match uci_info.board.get_color() {
             persa_chess::board_components::Color::White => {
-                if !is_square_attacked_white(&uci_info.board, uci_info.board[BoardSlots::WhiteKing].get_lsb_index()) || !MoveList::new(&uci_info.board).count == 0 {panic!("{} can not find mate", uci_info.board)}
+                if !is_square_attacked_white(&uci_info.board, uci_info.board[BoardSlots::WhiteKing].get_lsb_index()) || !MoveList::new(&uci_info).count == 0 {panic!("{} can not find mate", uci_info.board)}
             },
             persa_chess::board_components::Color::Black => {
-                if !is_square_attacked_black(&uci_info.board, uci_info.board[BoardSlots::BlackKing].get_lsb_index()) || !MoveList::new(&uci_info.board).count == 0 {panic!("{} can not find mate", uci_info.board)}
+                if !is_square_attacked_black(&uci_info.board, uci_info.board[BoardSlots::BlackKing].get_lsb_index()) || !MoveList::new(&uci_info).count == 0 {panic!("{} can not find mate", uci_info.board)}
             },
         }
     }
@@ -78,26 +77,31 @@ pub fn find_mate() {
 pub fn test_score_move_captures() {
     init_statics();
     let mut results: HashMap<String, isize> = HashMap::new();
-    results.insert("d5e4".to_string(), 105);
-    results.insert("e5d4".to_string(), 105);
-    results.insert("e5f4".to_string(), 205);
-    results.insert("c6d4".to_string(), 104);  
-    results.insert("f6e4".to_string(), 104);  
-    results.insert("f6d7".to_string(), 504);  
-    results.insert("b4c3".to_string(), 103);  
-    results.insert("g4h3".to_string(), 103);  
-    results.insert("g4d7".to_string(), 503);  
-    results.insert("g6g5".to_string(), 302);
-    results.insert("d8d7".to_string(), 502);
-    results.insert("d3f1".to_string(), 301); 
-    results.insert("d3c3".to_string(), 101); 
-    results.insert("d3g3".to_string(), 401); 
-    results.insert("d3d4".to_string(), 101); 
-    results.insert("d3e4".to_string(), 101); 
-    results.insert("d3b5".to_string(), 201);
+    results.insert("d5e4".to_string(), 10005);
+    results.insert("e5d4".to_string(), 10005);
+    results.insert("e5f4".to_string(), 20005);
+    results.insert("c6d4".to_string(), 10004);  
+    results.insert("f6e4".to_string(), 10004);  
+    results.insert("f6d7".to_string(), 50004);  
+    results.insert("b4c3".to_string(), 10003);  
+    results.insert("g4h3".to_string(), 10003);  
+    results.insert("g4d7".to_string(), 50003);  
+    results.insert("g6g5".to_string(), 30002);
+    results.insert("d8d7".to_string(), 50002);
+    results.insert("d3f1".to_string(), 30001); 
+    results.insert("d3c3".to_string(), 10001); 
+    results.insert("d3g3".to_string(), 40001); 
+    results.insert("d3d4".to_string(), 10001); 
+    results.insert("d3e4".to_string(), 10001); 
+    results.insert("d3b5".to_string(), 20001);
     let board = FenString::new("3r1k2/pppQ1pp1/2n2nr1/1N1pp1Bp/1b1PPNb1/2Pq2RP/PP3PP1/4KB1R b K - 17 16".to_string()).convert_to_board();
-    
-    for mov in MoveList::new(&board).iterate_moves().filter(|mov| mov.is_move_capture()) {
+    let uci_info = UciInformation::new().set_board(board);
+    for mov in MoveList::new(&uci_info).iterate_moves().filter(|mov| mov.is_move_capture()) {
         assert_eq!(results[&mov.get_move_name()], mov.get_score() as isize);
     }
 }
+
+pub fn uci_tests () {
+    
+}
+

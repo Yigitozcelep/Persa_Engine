@@ -1,3 +1,4 @@
+use crate::uci::UciInformation;
 use crate::board_components::{BitBoard, Square, Color};
 use crate::constants::directions::SOUTH;
 use crate::constants::{squares::{A8, H1, NO_SQUARE}, directions::*};
@@ -183,49 +184,48 @@ pub fn perft_diff_terminal() {
 }
 
 pub fn perft_diff_manuel(fen: String, depth: usize, moves: Vec<&str>, print_moves: bool) {
-    let mut board_status = FenString::new(fen).convert_to_board();
-    if print_moves {println!("****************\n******************\nCurrent: {}", board_status)}
+    let mut uci_info = UciInformation::new().set_depth_limit(depth as isize).set_board(FenString::new(fen).convert_to_board());
+    if print_moves {println!("****************\n******************\nCurrent: {}", uci_info.board)}
     for mov_string in moves {
-        let move_list = MoveList::new(&board_status);
+        let move_list = MoveList::new(&uci_info);
         if print_moves {println!("Moves:\n{}", move_list)};
         for mov in move_list.iterate_moves() {
             if mov.get_move_name() == mov_string {
-                board_status.make_move(mov);
+                uci_info.board.make_move(mov);
                 if print_moves {println!("Maded Move: {}", mov)};
                 break;
             }
         }
-        if print_moves {println!("After Move: {}", board_status)};
+        if print_moves {println!("After Move: {}", uci_info.board)};
     }
-    if print_moves {println!("\nLast Moves:\n{}", MoveList::new(&board_status))};
+    if print_moves {println!("\nLast Moves:\n{}", MoveList::new(&uci_info))};
     if print_moves {
         println!("*************** all bit boards ********************");
         for piece in BoardSlots::iterate_all_slots() {
             println!("*********************************************\n");
-            println!("Piece: {:?} Board: {}", piece, board_status[piece]);
+            println!("Piece: {:?} Board: {}", piece, uci_info.board[piece]);
         }
     }
-    perft_driver(&board_status, depth);
+    perft_driver(&uci_info);
 }
 
-pub fn perft_driver(board_status: &BoardStatus, depth: usize) -> usize {
+pub fn perft_driver(uci_info: &UciInformation) -> usize {
     let mut dq: VecDeque<(BoardStatus, String)> = VecDeque::new();
     let mut parents: HashMap<String, usize> = HashMap::new();
-    let move_list = MoveList::new(board_status);
+    let move_list = MoveList::new(uci_info);
     for mov in move_list.iterate_moves() {
-        let mut copy_node = *board_status;
+        let mut copy_node: BoardStatus = uci_info.board;
         if copy_node.make_move(mov) {
             let key = mov.get_move_name();
             parents.insert(key.clone(), 0);
             dq.push_back((copy_node, key));
         }
     }
-    for _ in 0..(depth -1) {
+    for _ in 0..(uci_info.depth_limit -1) {
         let len = dq.len();
         for _ in 0..len {
             let node = dq.pop_front().unwrap();
-            let move_list = MoveList::new(&node.0);
-
+            let move_list = MoveList::new(&UciInformation::new().set_board(node.0));
             move_list.iterate_moves().for_each(|mov| {
                 let mut copy_node = node.clone();
                 if copy_node.0.make_move(mov) {
