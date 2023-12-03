@@ -5,8 +5,6 @@ use crate::constants::board_constants::{BISHOP_MAX_BLOCK_PERM, ROOK_MAX_BLOCK_PE
 use std::cmp::{min, max};
 use std::sync::Once;
 
-
-
 static mut BISHOP_TABLE: ChessBoard<[BitBoard; BISHOP_MAX_BLOCK_PERM]> = ChessBoard::from([[BitBoard::new(); BISHOP_MAX_BLOCK_PERM]; 64]);
 static mut BISHOP_ATTACKS: ChessBoard<BitBoard> = ChessBoard::from([BitBoard::new(); 64]);
 static BISHOP_MOVES_COUNTS: ChessBoard<u64> = create_bishop_move_counts();
@@ -270,7 +268,6 @@ fn initialize_rook_components() {
     unsafe {initialize_slider_table(&mut ROOK_TABLE, &ROOK_MAGICS, mask_rook_attacks, rook_attacks_on_fly);}
     unsafe {initialize_slider_attacks(mask_rook_attacks, &mut ROOK_ATTACKS)}
 }
-
 
 
 #[inline(always)]

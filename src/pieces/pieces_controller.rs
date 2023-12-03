@@ -582,16 +582,19 @@ fn score_move(uci_info: &UciInformation, mov: MoveBitField, enemy_color: Color) 
 }
 
 pub struct BoardHistory {
-    pub killer_moves: [[MoveBitField; 2]; 64],
+    pub killer_moves    :   [[MoveBitField; 2]; 64],
+    pub found_best_move :   MoveBitField,
 }
 
 impl BoardHistory {
     pub fn new () -> Self {
-        Self {killer_moves: [[MoveBitField::NO_MOVE; 2]; 64]}
+        Self {killer_moves: [[MoveBitField::NO_MOVE; 2]; 64], found_best_move: MoveBitField::NO_MOVE}
     }
     
     pub fn append_killer_move(&mut self, mov: MoveBitField, half_move: usize) {
         self.killer_moves[half_move][1] = self.killer_moves[half_move][0];
         self.killer_moves[half_move][0] = mov;
     }
+
+    pub fn add_new_best_move(&mut self, mov: MoveBitField) { self.found_best_move = mov; }
 }

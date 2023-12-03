@@ -130,7 +130,10 @@ pub fn get_move(uci_info: &UciInformation, move_name: String) -> MoveBitField {
 pub fn position(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
     match data.next() {
         Some("startpos") => uci_info.board = FenString::new(START_POS.to_string()).convert_to_board(),
-        Some("fen")      => uci_info.board = FenString::new(data.clone().collect::<Vec<&str>>().join(" ")).convert_to_board(),
+        Some("fen")      => {
+            uci_info.board = FenString::new(data.clone().collect::<Vec<&str>>().join(" ")).convert_to_board();
+            data.next();
+        }
         _ => println!("unkown arguments"),
     }
 
@@ -140,7 +143,6 @@ pub fn position(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
 }
 
 pub fn go(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
-    
     loop {
         match data.next() {
             Some("wtime")     => uci_info.wtime           = data.next().unwrap().parse().unwrap(),
@@ -164,14 +166,14 @@ pub fn go(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
     
     let stop_signal = uci_info.stop_signal.clone();
     let some_thread = std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_secs(1));
+        
         *stop_signal.write().unwrap() = true;
     });
 
-    let res = find_best_move(uci_info);
+    find_best_move(uci_info);
     some_thread.join().unwrap();
     println!("{}", uci_info.node_count);
-    println!("{}", res.0);
+    println!("{}", uci_info.board_history.found_best_move);
 }
 
 pub fn uci_loop() {

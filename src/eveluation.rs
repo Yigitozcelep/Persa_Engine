@@ -30,25 +30,27 @@ pub fn eveluate(board_status: &BoardStatus) -> isize {
 }
 
 
-pub fn find_best_move(uci_info: &mut UciInformation) -> (MoveBitField, isize) {
-    if uci_info.depth_limit == 0 {return (MoveBitField::NO_MOVE, 0);}
-    uci_info.node_count += 1;
-    let move_list = MoveList::new(uci_info);
-    let mut best_move = MoveBitField::NO_MOVE;
-    let beta = 1000000;
-    let mut alpha = -1000000;
-    let old_board = uci_info.board;
-    for mov in move_list.iterate_moves() {
-        if uci_info.board.make_move(mov) {
-            let score = -negamax(uci_info, -alpha, -beta, uci_info.depth_limit -1);
-            if score > alpha {
-                alpha = score;
-                best_move = mov;
+pub fn find_best_move(uci_info: &mut UciInformation) {
+    if uci_info.depth_limit == 0 {return ;}
+    for depth in 1..uci_info.depth_limit + 1 {
+        uci_info.node_count = 1;
+        let move_list = MoveList::new(uci_info);
+        let mut best_move = MoveBitField::NO_MOVE;
+        let beta = 1000000;
+        let mut alpha = -1000000;
+        let old_board = uci_info.board;
+        for mov in move_list.iterate_moves() {
+            if uci_info.board.make_move(mov) {
+                let score = -negamax(uci_info, -alpha, -beta, depth -1);
+                if score > alpha {
+                    alpha = score;
+                    best_move = mov;
+                }
             }
+            uci_info.board = old_board;
         }
-        uci_info.board = old_board;
+        uci_info.board_history.add_new_best_move(best_move);
     }
-    (best_move, alpha)
 }
 
 #[inline(always)]

@@ -56,9 +56,9 @@ pub fn find_mate() {
                                         .set_depth_limit(6)
                                         .set_board(FenString::new(fen.to_string()).convert_to_board());
         for _ in 0..6 {
-            let (mov, _) = find_best_move(&mut uci_info);
-            if mov == MoveBitField::NO_MOVE {break;}
-            uci_info.board.make_move(mov);
+            find_best_move(&mut uci_info);
+            if uci_info.board_history.found_best_move == MoveBitField::NO_MOVE {break;}
+            uci_info.board.make_move(uci_info.board_history.found_best_move);
         }
         match uci_info.board.get_color() {
             persa_chess::board_components::Color::White => {
