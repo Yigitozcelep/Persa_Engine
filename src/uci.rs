@@ -9,6 +9,8 @@ use crate::eveluation::find_best_move;
 const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 pub struct UciInformation {
+    pub find_move_signal  : Arc<RwLock<bool>>,
+    pub quit_signal       : Arc<RwLock<bool>>,
     pub wtime             : usize,
     pub btime             : usize,
     pub winc              : usize,
@@ -33,6 +35,8 @@ pub struct UciInformation {
 impl UciInformation {
     pub fn new() -> Self {
         Self {
+            find_move_signal  : Arc::new(RwLock::new(false)),
+            quit_signal       : Arc::new(RwLock::new(false)),
             wtime             : usize::MAX,
             btime             : usize::MAX,
             winc              : 0,
@@ -52,6 +56,29 @@ impl UciInformation {
         }
     }
     
+    pub fn copy(&self) -> Self {
+        Self { 
+            find_move_signal: self.find_move_signal.clone(), 
+            quit_signal: self.quit_signal.clone(), 
+            wtime: self.wtime, 
+            btime: self.btime, 
+            winc: self.winc, 
+            binc: self.binc, 
+            depth_limit: self.depth_limit, 
+            board: self.board, 
+            moves_to_go: self.moves_to_go, 
+            nodes_limit: self.nodes_limit, 
+            time_limit: self.time_limit, 
+            search_until_mate: self.search_until_mate, 
+            ponder_search: self.ponder_search, 
+            infinity_search: self.infinity_search, 
+            stop_signal: self.stop_signal.clone(), 
+            start_time: self.start_time, 
+            node_count: self.node_count, 
+            board_history: self.board_history, 
+        }
+    }
+
     pub fn is_search_fnished(&self) -> bool {
         if *self.stop_signal.read().unwrap() == true {return true;}
         if let Some(time)  = self.time_limit {
@@ -115,10 +142,6 @@ impl UciInformation {
         self.board = board;
         self
     }
-    pub fn fnish_execute(&mut self) {
-        let mut signal = self.stop_signal.write().unwrap();
-        *signal = true;
-    }
 }
 
 pub fn get_move(uci_info: &UciInformation, move_name: String) -> MoveBitField {
@@ -159,40 +182,43 @@ pub fn go(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
             _ => break,
         }
     }
+    *uci_info.find_move_signal.write().unwrap() = true;
+}
+
+
+pub fn get_best_move(mut uci_info: UciInformation) {
     uci_info.node_count = 0;
     uci_info.start_time = Instant::now();
     uci_info.board_history = BoardHistory::new();
     *uci_info.stop_signal.write().unwrap() = false;
-    
-    let stop_signal = uci_info.stop_signal.clone();
-    let some_thread = std::thread::spawn(move || {
-        
-        *stop_signal.write().unwrap() = true;
-    });
-
-    find_best_move(uci_info);
-    some_thread.join().unwrap();
-    println!("{}", uci_info.node_count);
-    println!("{}", uci_info.board_history.found_best_move);
+    find_best_move(&mut uci_info);
+    *uci_info.stop_signal.write().unwrap() = false;
+    *uci_info.find_move_signal.write().unwrap() = false;
+    println!("node count: {}", uci_info.node_count);
+    println!("best move: {}", uci_info.board_history.found_best_move);
 }
 
 pub fn uci_loop() {
     let mut input = String::new();
     let mut uci_info = UciInformation::new();
-    loop {
+    while *uci_info.quit_signal.read().unwrap() == false {
         input.clear();
         let _ = std::io::stdin().read_line(&mut input);
 
         let mut data = input.split_whitespace();
         match data.next() {
-            Some("uci")         => println!("id name Persa\nid author Yigit\nuciok"),
-            Some("isready")     => println!("readyok"),
-            Some("go")          => go(data, &mut uci_info),
-            Some("position")    => position(data, &mut uci_info),
-            Some("stop")        => (),
+            Some("uci")         => if !*uci_info.find_move_signal.read().unwrap() {println!("id name Persa\nid author Yigit\nuciok")},
+            Some("isready")     => if !*uci_info.find_move_signal.read().unwrap() {println!("readyok")},
+            Some("go")          => if !*uci_info.find_move_signal.read().unwrap() { go(data, &mut uci_info) },
+            Some("position")    => if !*uci_info.find_move_signal.read().unwrap() {position(data, &mut uci_info)} ,
+            Some("stop")        => *uci_info.stop_signal.write().unwrap() = true,
             Some("ucinewgame")  => uci_info = UciInformation::new(),
-            Some("quit")        => break,
+            Some("quit")        => *uci_info.quit_signal.write().unwrap() = true,
             _                   => println!("unkown argument"),
+        }
+        let copy_uci = uci_info.copy();
+        if *uci_info.find_move_signal.read().unwrap() {
+            std::thread::spawn(move || get_best_move(copy_uci));
         }
     }
 }

@@ -49,12 +49,15 @@ pub fn find_best_move(uci_info: &mut UciInformation) {
             }
             uci_info.board = old_board;
         }
-        uci_info.board_history.add_new_best_move(best_move);
+        if *uci_info.stop_signal.read().unwrap() == false {
+            uci_info.board_history.add_new_best_move(best_move);
+        }
     }
 }
 
 #[inline(always)]
 fn quiescence(uci_info: &mut UciInformation, beta: isize, mut alpha: isize) -> isize {
+    if uci_info.is_search_fnished() { return alpha; }
     uci_info.node_count += 1;
     let stdpt = eveluate(&uci_info.board);
     if stdpt >= beta {return beta}
@@ -73,6 +76,7 @@ fn quiescence(uci_info: &mut UciInformation, beta: isize, mut alpha: isize) -> i
 
 #[inline(always)]
 fn negamax(uci_info: &mut UciInformation, beta: isize, mut alpha: isize, depth: isize) -> isize {
+    if uci_info.is_search_fnished() {return alpha;}
     if depth == 0 { return quiescence(uci_info, beta, alpha); }
     uci_info.node_count += 1;
     let move_list = MoveList::new(&uci_info);

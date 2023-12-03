@@ -581,10 +581,12 @@ fn score_move(uci_info: &UciInformation, mov: MoveBitField, enemy_color: Color) 
     return 0;
 }
 
+#[derive(Clone, Copy)]
 pub struct BoardHistory {
     pub killer_moves    :   [[MoveBitField; 2]; 64],
     pub found_best_move :   MoveBitField,
 }
+
 
 impl BoardHistory {
     pub fn new () -> Self {
