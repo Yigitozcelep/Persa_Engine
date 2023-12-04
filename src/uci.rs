@@ -4,12 +4,14 @@ use std::time::{Instant, Duration};
 use crate::pieces::pieces_controller::{BoardStatus, MoveBitField, MoveList, BoardHistory};
 use crate::debug::FenString;
 use std::sync::{Arc, RwLock};
+use crate::debug::perft_driver;
 use crate::eveluation::find_best_move;
 
 const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 pub struct UciInformation {
     pub find_move_signal  : Arc<RwLock<bool>>,
+    pub is_searching      : Arc<RwLock<bool>>,
     pub quit_signal       : Arc<RwLock<bool>>,
     pub wtime             : usize,
     pub btime             : usize,
@@ -35,6 +37,7 @@ pub struct UciInformation {
 impl UciInformation {
     pub fn new() -> Self {
         Self {
+            is_searching      : Arc::new(RwLock::new(false)),
             find_move_signal  : Arc::new(RwLock::new(false)),
             quit_signal       : Arc::new(RwLock::new(false)),
             wtime             : usize::MAX,
@@ -58,6 +61,7 @@ impl UciInformation {
     
     pub fn copy(&self) -> Self {
         Self { 
+            is_searching: self.is_searching.clone(),
             find_move_signal: self.find_move_signal.clone(), 
             quit_signal: self.quit_signal.clone(), 
             wtime: self.wtime, 
@@ -80,7 +84,7 @@ impl UciInformation {
     }
 
     pub fn is_search_fnished(&self) -> bool {
-        if *self.stop_signal.read().unwrap() == true {return true;}
+        if *self.stop_signal.read().unwrap() || *self.quit_signal.read().unwrap() {return true;}
         if let Some(time)  = self.time_limit {
             let time_limit = Duration::from_millis(time as u64);
             if self.start_time.elapsed().cmp(&time_limit) == Ordering::Less {return true;}
@@ -179,6 +183,10 @@ pub fn go(mut data: SplitWhitespace, uci_info: &mut UciInformation) {
             Some("mate")      => uci_info.moves_to_go     = Some(data.next().unwrap().parse().unwrap()),
             Some("ponder")    => uci_info.ponder_search   = true,
             Some("infinite")  => uci_info.infinity_search = true,
+            Some("perft")     => {
+                perft_driver(&uci_info.copy().set_depth_limit(data.next().unwrap().parse().unwrap()));
+                return;
+            },
             _ => break,
         }
     }
@@ -191,9 +199,11 @@ pub fn get_best_move(mut uci_info: UciInformation) {
     uci_info.start_time = Instant::now();
     uci_info.board_history = BoardHistory::new();
     *uci_info.stop_signal.write().unwrap() = false;
+    *uci_info.is_searching.write().unwrap() = true;
     find_best_move(&mut uci_info);
     *uci_info.stop_signal.write().unwrap() = false;
     *uci_info.find_move_signal.write().unwrap() = false;
+    *uci_info.is_searching.write().unwrap() = false;
     println!("node count: {}", uci_info.node_count);
     println!("best move: {}", uci_info.board_history.found_best_move);
 }
@@ -217,8 +227,9 @@ pub fn uci_loop() {
             _                   => println!("unkown argument"),
         }
         let copy_uci = uci_info.copy();
-        if *uci_info.find_move_signal.read().unwrap() {
-            std::thread::spawn(move || get_best_move(copy_uci));
+
+        if *uci_info.find_move_signal.read().unwrap() && *uci_info.is_searching.read().unwrap() == false {
+            std::thread::spawn(move || get_best_move(copy_uci) );
         }
     }
 }

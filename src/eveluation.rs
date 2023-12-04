@@ -42,6 +42,7 @@ pub fn find_best_move(uci_info: &mut UciInformation) {
         for mov in move_list.iterate_moves() {
             if uci_info.board.make_move(mov) {
                 let score = -negamax(uci_info, -alpha, -beta, depth -1);
+                if uci_info.is_search_fnished() {return;}
                 if score > alpha {
                     alpha = score;
                     best_move = mov;
@@ -49,9 +50,7 @@ pub fn find_best_move(uci_info: &mut UciInformation) {
             }
             uci_info.board = old_board;
         }
-        if *uci_info.stop_signal.read().unwrap() == false {
-            uci_info.board_history.add_new_best_move(best_move);
-        }
+        uci_info.board_history.add_new_best_move(best_move);
     }
 }
 
