@@ -238,9 +238,9 @@ pub fn perft_driver(uci_info: &UciInformation) -> usize {
         *parents.get_mut(&el.1).unwrap() += 1;
     }
     for el in parents {
-        println!("{} {}", el.0, el.1)
+        println!("{}: {}", el.0, el.1)
     }
-    println!("\n{}", dq.len());
+    println!("\nNodes searched: {}", dq.len());
     dq.len()
 }
 

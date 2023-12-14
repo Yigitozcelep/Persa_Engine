@@ -456,7 +456,7 @@ impl MoveList {
         }
         res
     }
-
+    
     #[inline(always)]
     pub fn append_move(&mut self, mov: MoveBitField) {
         self.moves[self.count].write(mov);

@@ -204,8 +204,7 @@ pub fn get_best_move(mut uci_info: UciInformation) {
     *uci_info.stop_signal.write().unwrap() = false;
     *uci_info.find_move_signal.write().unwrap() = false;
     *uci_info.is_searching.write().unwrap() = false;
-    println!("node count: {}", uci_info.node_count);
-    println!("best move: {}", uci_info.board_history.found_best_move);
+    println!("bestmove {}", uci_info.board_history.found_best_move.get_move_name());
 }
 
 pub fn uci_loop() {
